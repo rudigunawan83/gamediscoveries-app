@@ -1,0 +1,15 @@
+---
+description: Keep AI responses and code exploration token-efficient for this repository
+alwaysApply: true
+---
+
+# Token Efficiency Rule
+
+- Prioritaskan jawaban singkat dan langsung ke hasil.
+- Saat audit codebase, baca file yang paling relevan dulu dan hindari membaca file panjang secara linear penuh jika bisa dicari dengan keyword.
+- Jangan mengulang rangkuman yang sama jika konteks sebelumnya masih berlaku.
+- Saat membuat perubahan, fokus hanya pada file yang benar-benar terdampak.
+- Untuk dokumentasi, tulis padat, operasional, dan hindari filler.
+- Untuk implementasi Flutter, gunakan struktur yang kecil dan modular agar konteks edit tetap sempit.
+- Jika endpoint/backend belum pasti, dokumentasikan gap-nya daripada menebak implementasi panjang.
+- Saat memberi update progres, pakai 1-2 kalimat singkat.
