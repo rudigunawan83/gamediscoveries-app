@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/auth_repository.dart';
 import '../../domain/models/auth_session_state.dart';
+import '../../domain/models/auth_user.dart';
 
 class AuthSessionController extends AsyncNotifier<AuthSessionState> {
   @override
@@ -31,6 +32,15 @@ class AuthSessionController extends AsyncNotifier<AuthSessionState> {
         .read(authRepositoryProvider)
         .register(email: email, password: password, displayName: displayName);
     state = AsyncData<AuthSessionState>(next);
+  }
+
+  /// Applies a server-returned profile update (e.g. a new avatar) to the
+  /// signed-in session.
+  void updateUser(AuthUser user) {
+    if (state.value?.isAuthenticated != true) {
+      return;
+    }
+    state = AsyncData<AuthSessionState>(AuthSessionState.authenticated(user));
   }
 
   Future<void> logout() async {

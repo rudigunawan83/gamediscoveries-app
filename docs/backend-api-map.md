@@ -298,11 +298,15 @@ Dokumen ini memetakan API backend yang benar-benar ditemukan di `gamediscoveries
     - `id`
     - `gameId`
     - `playedAt`
-    - `durationSeconds`
+    - `durationSeconds` (longest single session)
+    - `totalPlaySeconds` (sum of server-measured `activeSeconds` across all platforms)
+    - `playCount` (number of ended sessions)
+    - `lastPlatform` (`WEB` | `ANDROID` | `IOS` | null)
     - `game: GameSummaryResponse`
+- Totals are written by the server when a game session ends (`GAME_SESSION_END`, idempotent per session via `game_play_sessions.history_recorded_at`); the client never sends them.
 - Pagination: No
 - Flutter usage:
-  - continue playing / recently played
+  - Continue Playing card (home + Play tab) with a Continue button straight into the player; refreshed when the app returns to the foreground so games played on the web show up
 
 ### `POST /api/v1/users/me/history`
 
@@ -876,6 +880,10 @@ Flutter usage:
 
 ### Posts
 
+- `GET /api/v1/community/posts?sort=latest|trending|most_liked&q=&cursor=&limit=`
+  - public; `cursor` is an opaque offset string; response `{ items: CommunityPostDto[], nextCursor }`
+  - `q` searches title/content (max 100 chars); items include `viewerReaction` when signed in
+  - `author.level` (nullable) and `game.categories` (max 3) are included on all post DTOs
 - `GET /api/v1/community/posts/{id}`
 - `POST /api/v1/community/posts`
 - `PUT /api/v1/community/posts/{id}`

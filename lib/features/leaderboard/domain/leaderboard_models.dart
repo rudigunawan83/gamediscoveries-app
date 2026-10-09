@@ -41,6 +41,7 @@ class LeaderboardEntry {
     required this.gamesPlayed,
     this.avatarUrl,
     this.rankChange,
+    this.level,
   });
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
@@ -58,6 +59,7 @@ class LeaderboardEntry {
       score: parseInt(json['score']),
       gamesPlayed: parseInt(json['gamesPlayed']),
       rankChange: (json['rankChange'] as num?)?.toInt(),
+      level: (user['level'] as num?)?.toInt(),
     );
   }
 
@@ -68,6 +70,9 @@ class LeaderboardEntry {
   final int score;
   final int gamesPlayed;
   final int? rankChange;
+
+  /// Server-computed player level; `null` if the player has no progress yet.
+  final int? level;
 }
 
 class LeaderboardDetail {

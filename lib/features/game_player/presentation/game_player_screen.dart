@@ -255,6 +255,8 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
       }
       _played.start();
       _startHeartbeat();
+      // Marks the game as last played right away so other devices see it.
+      if (_signedIn) _safe(() => _library.recordHistory(widget.game.id));
     } catch (error) {
       _logger.w('Game session start failed: $error');
     }

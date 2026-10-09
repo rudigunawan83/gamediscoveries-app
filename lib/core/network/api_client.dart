@@ -80,6 +80,14 @@ class ApiClient {
     );
   }
 
+  Future<void> putAction(String path, {Object? body}) async {
+    await _send<Object?>(
+      () => _dio.put<Object?>(path, data: body ?? const <String, dynamic>{}),
+      (Object? json) => json,
+      allowEmptyBody: true,
+    );
+  }
+
   Future<void> deleteAction(String path) async {
     await _send<Object?>(
       () => _dio.delete<Object?>(path),

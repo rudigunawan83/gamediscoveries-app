@@ -9,6 +9,7 @@ class GdAvatar extends StatelessWidget {
     this.imageUrl,
     this.size = 40,
     this.ringColor,
+    this.placeholder,
     super.key,
   });
 
@@ -17,7 +18,12 @@ class GdAvatar extends StatelessWidget {
   final double size;
   final Color? ringColor;
 
-  String get _initials {
+  /// Shown when there is no image or it fails to load; defaults to initials.
+  final Widget? placeholder;
+
+  String get _initials => initialsOf(name);
+
+  static String initialsOf(String name) {
     final parts = name
         .trim()
         .split(RegExp(r'\s+'))
@@ -38,6 +44,13 @@ class GdAvatar extends StatelessWidget {
     final url = imageUrl;
     final ring = ringColor;
     final cacheSize = (size * MediaQuery.devicePixelRatioOf(context)).round();
+    final fallback =
+        placeholder ??
+        _Initials(
+          text: _initials,
+          color: _fallbackColor,
+          fontSize: size * 0.38,
+        );
 
     final avatar = ClipOval(
       child: SizedBox.square(
@@ -47,10 +60,9 @@ class GdAvatar extends StatelessWidget {
                 imageUrl: url,
                 fit: BoxFit.cover,
                 memCacheWidth: cacheSize,
-                errorWidget: (BuildContext c, String u, Object e) =>
-                    _Initials(text: _initials, color: _fallbackColor),
+                errorWidget: (BuildContext c, String u, Object e) => fallback,
               )
-            : _Initials(text: _initials, color: _fallbackColor),
+            : fallback,
       ),
     );
 
@@ -72,10 +84,15 @@ class GdAvatar extends StatelessWidget {
 }
 
 class _Initials extends StatelessWidget {
-  const _Initials({required this.text, required this.color});
+  const _Initials({
+    required this.text,
+    required this.color,
+    required this.fontSize,
+  });
 
   final String text;
   final Color color;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +110,9 @@ class _Initials extends StatelessWidget {
             padding: const EdgeInsets.all(6),
             child: Text(
               text,
-              style: const TextStyle(
+              textScaler: TextScaler.noScaling,
+              style: TextStyle(
+                fontSize: fontSize,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
               ),

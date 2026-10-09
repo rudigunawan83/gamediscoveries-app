@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,14 +7,16 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../shared/widgets/gd_avatar.dart';
+import '../../../shared/widgets/gold_tab.dart';
 import '../../../shared/widgets/pill_tabs.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../../auth/presentation/providers/auth_session_controller.dart';
 import '../data/community_repository.dart';
 import '../domain/community_models.dart';
 import 'community_providers.dart';
+import 'community_widgets.dart';
+
+const double _maxContentWidth = 640;
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
@@ -22,22 +26,41 @@ class CommunityScreen extends ConsumerStatefulWidget {
 }
 
 class _CommunityScreenState extends ConsumerState<CommunityScreen> {
-  int _tab = 0;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  CommunityPostSort _sort = CommunityPostSort.latest;
+  bool _searching = false;
+  String _search = '';
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String text) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) setState(() => _search = text.trim());
+    });
+  }
+
+  void _closeSearch() {
+    _debounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _searching = false;
+      _search = '';
+    });
+  }
 
   Future<void> _openComposer() async {
     final signedIn = await ref.read(isSignedInProvider.future);
     if (!mounted) return;
 
     if (!signedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Sign in to post in the community.'),
-          action: SnackBarAction(
-            label: 'Sign In',
-            onPressed: () => context.push(AppRoutes.login),
-          ),
-        ),
-      );
+      showCommunitySignInPrompt(context, 'Sign in to post in the community.');
       return;
     }
 
@@ -48,249 +71,322 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       showDragHandle: true,
       builder: (BuildContext context) => const _ComposerSheet(),
     );
-    if (posted ?? false) {
-      ref
-        ..invalidate(communityFeedProvider)
-        ..invalidate(communityHomeProvider);
-    }
+    if (posted ?? false) ref.invalidate(communityPostsProvider);
   }
 
   @override
   Widget build(BuildContext context) {
+    final CommunityPostQuery query = (sort: _sort, search: _search);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Community')),
+      appBar: AppBar(
+        centerTitle: false,
+        title: _searching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                onChanged: _onSearchChanged,
+                onSubmitted: (String text) {
+                  _debounce?.cancel();
+                  setState(() => _search = text.trim());
+                },
+                decoration: const InputDecoration(
+                  hintText: 'Search posts',
+                  isDense: true,
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              )
+            : const _Title(),
+        actions: <Widget>[
+          if (_searching)
+            IconButton(
+              tooltip: 'Close search',
+              onPressed: _closeSearch,
+              icon: const Icon(Icons.close_rounded),
+            )
+          else ...<Widget>[
+            IconButton(
+              tooltip: 'Saved posts',
+              onPressed: () => context.push(AppRoutes.communitySaved),
+              icon: const Icon(Icons.bookmarks_outlined),
+            ),
+            _CircleIconButton(
+              tooltip: 'Search posts',
+              icon: Icons.search_rounded,
+              onPressed: () => setState(() => _searching = true),
+            ),
+          ],
+          const SizedBox(width: 12),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'New post',
         onPressed: _openComposer,
         child: const Icon(Icons.add_rounded, size: 30),
       ),
-      body: Column(
-        children: <Widget>[
-          PillTabs(
-            labels: const <String>['Latest', 'Trending', 'Most Liked'],
-            selectedIndex: _tab,
-            onChanged: (int i) => setState(() => _tab = i),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _tab == 0
-                ? const _LatestFeed()
-                : _Discussions(mostLiked: _tab == 2),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LatestFeed extends ConsumerWidget {
-  const _LatestFeed();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final feed = ref.watch(communityFeedProvider);
-
-    return feed.when(
-      skipLoadingOnRefresh: true,
-      data: (CommunityFeedPage page) => _PostList(
-        posts: page.items,
-        onRefresh: () => ref.refresh(communityFeedProvider.future),
-      ),
-      loading: () => const LoadingView(),
-      error: (Object error, StackTrace stackTrace) => ErrorView(
-        error: error,
-        onRetry: () => ref.invalidate(communityFeedProvider),
-      ),
-    );
-  }
-}
-
-class _Discussions extends ConsumerWidget {
-  const _Discussions({required this.mostLiked});
-
-  final bool mostLiked;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final home = ref.watch(communityHomeProvider);
-
-    return home.when(
-      skipLoadingOnRefresh: true,
-      data: (CommunityHome data) {
-        final posts = List<CommunityPost>.of(data.trendingDiscussions);
-        if (mostLiked) {
-          posts.sort(
-            (CommunityPost a, CommunityPost b) =>
-                b.reactionCount.compareTo(a.reactionCount),
-          );
-        }
-        return _PostList(
-          posts: posts,
-          onRefresh: () => ref.refresh(communityHomeProvider.future),
-        );
-      },
-      loading: () => const LoadingView(),
-      error: (Object error, StackTrace stackTrace) => ErrorView(
-        error: error,
-        onRetry: () => ref.invalidate(communityHomeProvider),
-      ),
-    );
-  }
-}
-
-class _PostList extends StatelessWidget {
-  const _PostList({required this.posts, required this.onRefresh});
-
-  final List<CommunityPost> posts;
-  final Future<Object?> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    if (posts.isEmpty) {
-      return const MessageView(
-        icon: Icons.forum_outlined,
-        title: 'Nothing here yet',
-        message: 'Start the conversation with the + button.',
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
-        itemCount: posts.length,
-        separatorBuilder: (BuildContext context, int index) =>
-            const SizedBox(height: 12),
-        itemBuilder: (BuildContext context, int index) =>
-            _PostCard(post: posts[index]),
-      ),
-    );
-  }
-}
-
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
-
-  final CommunityPost post;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final game = post.game;
-    final label = post.typeLabel;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              GdAvatar(
-                name: post.author.name,
-                imageUrl: post.author.avatarUrl,
-                size: 38,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      post.author.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    Text(
-                      formatTimeAgo(post.createdAt),
-                      style: textTheme.labelSmall?.copyWith(
-                        color: AppColors.textMuted,
+      body: _Centered(
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: Row(
+                spacing: 8,
+                children: <Widget>[
+                  for (final sort in CommunityPostSort.values)
+                    Expanded(
+                      child: GoldTab(
+                        label: sort.label,
+                        icon: _sortIcon(sort),
+                        selected: sort == _sort,
+                        onTap: () => setState(() => _sort = sort),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
-              if (label.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.gold,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          if (post.title.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 10),
-            Text(
-              post.title,
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
+            ),
+            Expanded(
+              child: _PostFeed(
+                key: ValueKey<CommunityPostQuery>(query),
+                query: query,
               ),
             ),
           ],
-          if (post.content.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              post.content,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-          if (game != null && game.slug.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 10),
-            ActionChip(
-              avatar: const Icon(
-                Icons.sports_esports_rounded,
-                size: 16,
-                color: AppColors.gold,
-              ),
-              label: Text(game.title),
-              onPressed: () => context.push(AppRoutes.game(game.slug)),
-            ),
-          ],
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              const Icon(
-                Icons.favorite_rounded,
-                size: 18,
-                color: AppColors.danger,
-              ),
-              const SizedBox(width: 4),
-              Text(formatCompact(post.reactionCount)),
-              const SizedBox(width: 16),
-              const Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 18,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 4),
-              Text(formatCompact(post.commentCount)),
-            ],
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  static Widget? _sortIcon(CommunityPostSort sort) => switch (sort) {
+    CommunityPostSort.latest => null,
+    CommunityPostSort.trending => const ExcludeSemantics(
+      child: Text('🔥', style: TextStyle(fontSize: 17)),
+    ),
+    CommunityPostSort.mostLiked => const ExcludeSemantics(
+      child: Text('👑', style: TextStyle(fontSize: 17)),
+    ),
+  };
+}
+
+class _Title extends StatelessWidget {
+  const _Title();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: AppColors.goldGradient.createShader,
+          child: const Icon(Icons.sports_esports_rounded, size: 34),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            'Community',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.surface,
+        side: const BorderSide(color: AppColors.line),
+      ),
+      icon: Icon(icon, size: 24),
+    );
+  }
+}
+
+/// Caps content to a readable width on tablets.
+class _Centered extends StatelessWidget {
+  const _Centered({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      heightFactor: 1,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _PostFeed extends ConsumerStatefulWidget {
+  const _PostFeed({required this.query, super.key});
+
+  final CommunityPostQuery query;
+
+  @override
+  ConsumerState<_PostFeed> createState() => _PostFeedState();
+}
+
+class _PostFeedState extends ConsumerState<_PostFeed> {
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_maybeLoadMore);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _maybeLoadMore() {
+    if (_scroll.position.extentAfter < 600) {
+      ref.read(communityPostsProvider(widget.query).notifier).loadMore();
+    }
+  }
+
+  Future<void> _like(CommunityPost post) async {
+    final signedIn = ref.read(isSignedInProvider).value ?? false;
+    if (!signedIn) {
+      showCommunitySignInPrompt(context, 'Sign in to like posts.');
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(communityPostsProvider(widget.query).notifier)
+          .toggleLike(post);
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(error))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final posts = ref.watch(communityPostsProvider(widget.query));
+    final saved = ref.watch(savedCommunityPostsProvider);
+    final savedIds = <String?>{for (final p in saved) p.postId};
+
+    return posts.when(
+      skipLoadingOnRefresh: true,
+      loading: () => const LoadingView(),
+      error: (Object error, StackTrace stackTrace) => ErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(communityPostsProvider(widget.query)),
+      ),
+      data: (CommunityPostList list) {
+        if (list.items.isEmpty) {
+          final search = widget.query.search;
+          return search.isEmpty
+              ? const MessageView(
+                  icon: Icons.forum_outlined,
+                  title: 'Nothing here yet',
+                  message: 'Start the conversation with the + button.',
+                )
+              : MessageView(
+                  icon: Icons.search_off_rounded,
+                  title: 'No posts found',
+                  message: 'Nothing matches "$search". Try another word.',
+                );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.refresh(communityPostsProvider(widget.query).future),
+          child: ListView.separated(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+            itemCount: list.items.length + (list.isLoadingMore ? 1 : 0),
+            separatorBuilder: (BuildContext context, int index) =>
+                const SizedBox(height: 14),
+            itemBuilder: (BuildContext context, int index) {
+              if (index >= list.items.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final post = list.items[index];
+              return CommunityPostCard(
+                post: post,
+                saved: savedIds.contains(post.postId),
+                onLike: () => _like(post),
+                onToggleSave: () =>
+                    toggleSavedCommunityPost(context, ref, post),
+                onShare: () => shareCommunityPost(post),
+                onMore: () => showCommunityPostMenu(context, ref, post),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Bookmarked posts, stored on this device.
+class CommunitySavedScreen extends ConsumerWidget {
+  const CommunitySavedScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saved = ref.watch(savedCommunityPostsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Saved Posts')),
+      body: saved.isEmpty
+          ? const MessageView(
+              icon: Icons.bookmark_border_rounded,
+              title: 'No saved posts',
+              message: 'Tap the bookmark on a post to keep it here.',
+            )
+          : _Centered(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                itemCount: saved.length,
+                separatorBuilder: (BuildContext context, int index) =>
+                    const SizedBox(height: 14),
+                itemBuilder: (BuildContext context, int index) {
+                  final post = saved[index];
+                  return CommunityPostCard(
+                    post: post,
+                    saved: true,
+                    onToggleSave: () =>
+                        toggleSavedCommunityPost(context, ref, post),
+                    onShare: () => shareCommunityPost(post),
+                    onMore: () => showCommunityPostMenu(context, ref, post),
+                  );
+                },
+              ),
+            ),
     );
   }
 }

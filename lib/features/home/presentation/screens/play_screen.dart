@@ -6,11 +6,10 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/models/game_summary.dart';
 import '../../../../shared/widgets/game_list_tile.dart';
-import '../../../../shared/widgets/game_shelf.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../../shared/widgets/state_views.dart';
 import '../../../discovery/presentation/providers/discovery_providers.dart';
-import '../../../favorites/data/library_repository.dart';
+import '../../../favorites/presentation/continue_playing_section.dart';
 import '../../../favorites/presentation/library_providers.dart';
 
 class PlayScreen extends ConsumerWidget {
@@ -19,8 +18,6 @@ class PlayScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quickPlay = ref.watch(quickPlayProvider);
-    final history = ref.watch(playHistoryProvider).value;
-    final recent = _uniqueGames(history ?? const <HistoryEntry>[]);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Play'), centerTitle: false),
@@ -33,14 +30,8 @@ class PlayScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 32),
           children: <Widget>[
-            if (recent.isNotEmpty) ...<Widget>[
-              GameShelf(
-                title: 'Continue Playing',
-                games: recent,
-                onSeeAll: () => context.push(AppRoutes.history),
-              ),
-              const SizedBox(height: 24),
-            ],
+            const SizedBox(height: 8),
+            const ContinuePlayingSection(trailingGap: 24),
             const SectionHeader(title: 'Quick Play'),
             const SizedBox(height: 12),
             quickPlay.when(
@@ -74,14 +65,6 @@ class PlayScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  static List<GameSummary> _uniqueGames(List<HistoryEntry> entries) {
-    final seen = <String>{};
-    return <GameSummary>[
-      for (final e in entries)
-        if (seen.add(e.game.id)) e.game,
-    ];
   }
 }
 

@@ -1,17 +1,28 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../shared/widgets/gd_avatar.dart';
+import '../../../core/errors/error_messages.dart';
 import '../../../shared/widgets/state_views.dart';
-import '../../../shared/widgets/xp_progress_bar.dart';
+import '../../achievements/domain/achievement_models.dart';
 import '../../achievements/presentation/achievements_providers.dart';
 import '../../auth/domain/models/auth_session_state.dart';
 import '../../auth/presentation/providers/auth_session_controller.dart';
+import '../../progress/domain/progress_models.dart';
 import '../../progress/presentation/progress_providers.dart';
+import 'avatar_controller.dart';
+import 'avatar_edit_sheet.dart';
+import 'sign_out_dialog.dart';
+import 'widgets/profile_header.dart';
+import 'widgets/profile_hero_background.dart';
+import 'widgets/profile_identity_card.dart';
+import 'widgets/profile_menu_item.dart';
+import 'widgets/profile_statistics_card.dart';
+import 'widgets/profile_xp_progress.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -21,17 +32,96 @@ class ProfileScreen extends ConsumerWidget {
     final session = ref.watch(authSessionControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile'), centerTitle: false),
-      body: session.when(
-        data: (AuthSessionState s) => s.isAuthenticated
-            ? const _SignedInProfile()
-            : const _GuestProfile(),
-        loading: () => const LoadingView(),
-        error: (Object error, StackTrace stackTrace) => ErrorView(
-          error: error,
-          onRetry: () => ref.invalidate(authSessionControllerProvider),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: session.when(
+          data: (AuthSessionState s) => s.isAuthenticated
+              ? const _SignedInProfile()
+              : const _GuestProfile(),
+          loading: () => const _ProfileBody(children: <Widget>[LoadingView()]),
+          error: (Object error, StackTrace stackTrace) => _ProfileBody(
+            children: <Widget>[
+              ErrorView(
+                error: error,
+                onRetry: () => ref.invalidate(authSessionControllerProvider),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Scrollable page shell. The header and [identity] sit on the full-bleed
+/// hero artwork (drawn under the status bar); the rest is capped to a
+/// readable width on tablets.
+class _ProfileBody extends StatelessWidget {
+  const _ProfileBody({required this.children, this.identity, this.onRefresh});
+
+  static const double _maxContentWidth = 560;
+
+  final Widget? identity;
+  final List<Widget> children;
+  final RefreshCallback? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
+    final identityWidget = identity;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final horizontal = math.max(
+          20.0,
+          (constraints.maxWidth - _maxContentWidth) / 2,
+        );
+        final list = ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 32),
+          children: <Widget>[
+            Stack(
+              children: <Widget>[
+                const Positioned.fill(child: ProfileHeroBackground()),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontal,
+                    topInset + 12,
+                    horizontal,
+                    24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      ProfileHeader(
+                        title: 'Profile',
+                        onSettings: () =>
+                            context.push(AppRoutes.accountSettings),
+                      ),
+                      if (identityWidget != null) ...<Widget>[
+                        const SizedBox(height: 4),
+                        identityWidget,
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontal),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            ),
+          ],
+        );
+        final refresh = onRefresh;
+        return refresh == null
+            ? list
+            : RefreshIndicator(onRefresh: refresh, child: list);
+      },
     );
   }
 }
@@ -39,178 +129,129 @@ class ProfileScreen extends ConsumerWidget {
 class _SignedInProfile extends ConsumerWidget {
   const _SignedInProfile();
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Sign out?'),
-        content: const Text('Your progress stays saved on your account.'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: AppColors.danger),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed ?? false) {
-      await ref.read(authSessionControllerProvider.notifier).logout();
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final textTheme = Theme.of(context).textTheme;
     final user = ref.watch(authSessionControllerProvider).value?.user;
-    final progress = ref.watch(myProgressProvider).value;
+    final progressAsync = ref.watch(myProgressProvider);
+    final progress = progressAsync.value;
     final achievements = ref.watch(myAchievementsProvider).value;
 
     final name = progress?.userName.isNotEmpty == true
         ? progress!.userName
         : (user?.displayName.isNotEmpty == true ? user!.displayName : 'Player');
-    final level = progress?.level;
-    final stats = progress?.stats;
+    final progressError = progress == null ? progressAsync.error : null;
+    // /users/me is the source of truth; progress can lag behind an upload.
+    final avatarUrl = user?.avatarUrl;
+    final username = user?.username;
+    final handle = username != null && username.isNotEmpty
+        ? '@$username'
+        : user?.email;
 
-    return RefreshIndicator(
+    void retry() {
+      ref.invalidate(myProgressProvider);
+      ref.invalidate(myAchievementsProvider);
+    }
+
+    return _ProfileBody(
       onRefresh: () {
         ref.invalidate(myAchievementsProvider);
         return ref.refresh(myProgressProvider.future);
       },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: <Widget>[
-          Center(
-            child: GdAvatar(
-              name: name,
-              imageUrl: progress?.avatarUrl ?? user?.avatarUrl,
-              size: 96,
-              ringColor: AppColors.gold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          if (user != null)
-            Text(
-              user.email,
-              textAlign: TextAlign.center,
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          if (level != null) ...<Widget>[
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                Text(
-                  'Level ${level.level}',
-                  style: const TextStyle(
-                    color: AppColors.gold,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  level.isMaxLevel
-                      ? 'MAX'
-                      : '${formatGrouped(level.currentLevelXp)} / '
-                            '${formatGrouped(level.nextLevelXp)} XP',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            XpProgressBar(value: level.progress, height: 8),
-          ],
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: <Widget>[
-                _Stat(
-                  value: stats == null
-                      ? '—'
-                      : formatCompact(stats.uniqueGamesPlayed),
-                  label: 'Games',
-                ),
-                _Stat(
-                  value: stats == null ? '—' : formatCompact(stats.favorites),
-                  label: 'Favorites',
-                ),
-                _Stat(
-                  value: stats == null ? '—' : '${stats.currentStreak}d',
-                  label: 'Streak',
-                ),
-                _Stat(
-                  value: achievements == null
-                      ? '—'
-                      : '${achievements.userUnlocked}',
-                  label: 'Badges',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _MenuGroup(
-            items: <_MenuItem>[
-              _MenuItem(
-                Icons.favorite_rounded,
-                AppColors.pink,
-                'My Favorites',
-                AppRoutes.favorites,
-              ),
-              _MenuItem(
-                Icons.history_rounded,
-                AppColors.blue,
-                'Play History',
-                AppRoutes.history,
-              ),
-              _MenuItem(
-                Icons.trending_up_rounded,
-                AppColors.success,
-                'My Progress',
-                AppRoutes.progress,
-              ),
-              _MenuItem(
-                Icons.emoji_events_rounded,
-                AppColors.gold,
-                'Achievements',
-                AppRoutes.achievements,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const _MenuGroup(items: _communityItems),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: () => _confirmLogout(context, ref),
-            icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
-            label: const Text(
-              'Sign Out',
-              style: TextStyle(color: AppColors.danger),
-            ),
-          ),
-        ],
+      identity: ProfileIdentityCard(
+        name: name,
+        subtitle: handle,
+        avatarUrl: avatarUrl,
+        avatarBusy: ref.watch(avatarControllerProvider),
+        onEditAvatar: () =>
+            editAvatar(context, ref, hasAvatar: avatarUrl != null),
       ),
+      children: <Widget>[
+        if (progressError != null)
+          _ProgressErrorCard(error: progressError, onRetry: retry)
+        else ...<Widget>[
+          ProfileXpProgress(level: progress?.level),
+          const SizedBox(height: 20),
+          ProfileStatisticsCard(stats: _stats(progress, achievements)),
+        ],
+        const SizedBox(height: 24),
+        const _MainMenu(),
+        const SizedBox(height: 24),
+        const _MoreSection(
+          items: <_MoreItem>[
+            _MoreItem(
+              Icons.trending_up_rounded,
+              AppColors.teal,
+              'My Progress',
+              AppRoutes.progress,
+            ),
+            _MoreItem(
+              Icons.emoji_events_rounded,
+              AppColors.gold,
+              'Achievements',
+              AppRoutes.achievements,
+            ),
+            ..._communityItems,
+          ],
+        ),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: () => confirmAndSignOut(context, ref),
+          icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
+          label: const Text(
+            'Sign Out',
+            style: TextStyle(color: AppColors.danger),
+          ),
+        ),
+      ],
     );
+  }
+
+  /// Every value comes from the backend; `null` renders as a dash.
+  static List<ProfileStat> _stats(
+    UserProgress? progress,
+    AchievementList? achievements,
+  ) {
+    final stats = progress?.stats;
+    return <ProfileStat>[
+      ProfileStat(
+        icon: const GradientIcon(
+          Icons.local_fire_department_rounded,
+          colors: <Color>[
+            Color(0xFFFF4D2E),
+            Color(0xFFFF8A1F),
+            Color(0xFFFFC928),
+          ],
+        ),
+        label: 'Games',
+        semanticsLabel: 'Game sessions played',
+        value: stats?.totalGameSessions,
+      ),
+      ProfileStat(
+        icon: const GradientIcon(
+          Icons.sports_esports_rounded,
+          colors: <Color>[Color(0xFFFFE27A), AppColors.goldDeep],
+        ),
+        label: 'Games',
+        semanticsLabel: 'Different games played',
+        value: stats?.uniqueGamesPlayed,
+      ),
+      ProfileStat(
+        icon: const GradientIcon(
+          Icons.emoji_events_rounded,
+          colors: <Color>[Color(0xFFFFE27A), AppColors.goldDeep],
+        ),
+        label: 'Achievements',
+        semanticsLabel: 'Achievements unlocked',
+        value: achievements?.userUnlocked,
+        highlight: true,
+      ),
+      ProfileStat(
+        icon: const _PointsIcon(),
+        label: 'Points',
+        semanticsLabel: 'Total XP points',
+        value: progress?.level.totalXp,
+      ),
+    ];
   }
 }
 
@@ -221,19 +262,12 @@ class _GuestProfile extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+    return _ProfileBody(
+      identity: const ProfileIdentityCard(
+        name: 'Guest Player',
+        highlighted: false,
+      ),
       children: <Widget>[
-        const Center(
-          child: GdAvatar(name: 'Guest', size: 96, ringColor: AppColors.line),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Guest Player',
-          textAlign: TextAlign.center,
-          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 4),
         Text(
           'Create an account to save XP, streaks, favorites and achievements.',
           textAlign: TextAlign.center,
@@ -250,26 +284,72 @@ class _GuestProfile extends StatelessWidget {
           child: const Text('Sign In'),
         ),
         const SizedBox(height: 24),
-        const _MenuGroup(items: _communityItems),
+        const _MainMenu(),
+        const SizedBox(height: 24),
+        const _MoreSection(items: _communityItems),
       ],
     );
   }
 }
 
-const List<_MenuItem> _communityItems = <_MenuItem>[
-  _MenuItem(
+class _MainMenu extends StatelessWidget {
+  const _MainMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 10,
+      children: <Widget>[
+        ProfileMenuItem(
+          icon: Icons.favorite_rounded,
+          label: 'My Favorites',
+          accent: AppColors.gold,
+          onTap: () => context.push(AppRoutes.favorites),
+        ),
+        ProfileMenuItem(
+          icon: Icons.history_rounded,
+          label: 'Play History',
+          accent: AppColors.purple,
+          onTap: () => context.push(AppRoutes.history),
+        ),
+        ProfileMenuItem(
+          icon: Icons.chat_outlined,
+          label: 'My Reviews',
+          accent: AppColors.blue,
+          onTap: () => context.push(AppRoutes.myReviews),
+        ),
+        ProfileMenuItem(
+          icon: Icons.settings_rounded,
+          label: 'Account Settings',
+          accent: AppColors.success,
+          onTap: () => context.push(AppRoutes.accountSettings),
+        ),
+        ProfileMenuItem(
+          icon: Icons.help_outline_rounded,
+          label: 'Help & Support',
+          accent: AppColors.danger,
+          onTap: () => context.push(AppRoutes.help),
+        ),
+      ],
+    );
+  }
+}
+
+const List<_MoreItem> _communityItems = <_MoreItem>[
+  _MoreItem(
     Icons.leaderboard_rounded,
     AppColors.purple,
     'Leaderboard',
     AppRoutes.leaderboard,
   ),
-  _MenuItem(
+  _MoreItem(
     Icons.forum_rounded,
     AppColors.teal,
     'Community',
     AppRoutes.community,
   ),
-  _MenuItem(
+  _MoreItem(
     Icons.notifications_rounded,
     AppColors.orange,
     'Notifications',
@@ -277,27 +357,88 @@ const List<_MenuItem> _communityItems = <_MenuItem>[
   ),
 ];
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
+class _MoreItem {
+  const _MoreItem(this.icon, this.accent, this.label, this.route);
 
-  final String value;
+  final IconData icon;
+  final Color accent;
   final String label;
+  final String route;
+}
+
+class _MoreSection extends StatelessWidget {
+  const _MoreSection({required this.items});
+
+  final List<_MoreItem> items;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: <Widget>[
-          Text(
-            value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 10,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Semantics(
+            header: true,
+            child: Text(
+              'More',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+        ),
+        for (final item in items)
+          ProfileMenuItem(
+            icon: item.icon,
+            label: item.label,
+            accent: item.accent,
+            prominent: false,
+            onTap: () => context.push(item.route),
+          ),
+      ],
+    );
+  }
+}
+
+class _ProgressErrorCard extends StatelessWidget {
+  const _ProgressErrorCard({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(Icons.wifi_off_rounded, color: AppColors.danger),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  friendlyErrorMessage(error),
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onRetry,
+              child: const Text('Try again'),
             ),
           ),
         ],
@@ -306,55 +447,21 @@ class _Stat extends StatelessWidget {
   }
 }
 
-class _MenuItem {
-  const _MenuItem(this.icon, this.color, this.label, this.route);
-
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String route;
-}
-
-class _MenuGroup extends StatelessWidget {
-  const _MenuGroup({required this.items});
-
-  final List<_MenuItem> items;
+class _PointsIcon extends StatelessWidget {
+  const _PointsIcon();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: <Widget>[
-          for (var i = 0; i < items.length; i++) ...<Widget>[
-            if (i > 0)
-              const Divider(height: 1, indent: 64, color: AppColors.line),
-            ListTile(
-              onTap: () => context.push(items[i].route),
-              leading: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: items[i].color.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Icon(items[i].icon, color: items[i].color, size: 20),
-              ),
-              title: Text(
-                items[i].label,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textMuted,
-              ),
-            ),
-          ],
-        ],
-      ),
+    return const Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        GradientIcon(
+          Icons.hexagon_rounded,
+          colors: <Color>[Color(0xFFC084FC), Color(0xFF6D28D9)],
+          size: 36,
+        ),
+        Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 15),
+      ],
     );
   }
 }

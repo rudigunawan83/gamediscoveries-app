@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/game_list_tile.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../data/library_repository.dart';
+import 'continue_playing_section.dart';
 import 'library_providers.dart';
 
 class HistoryScreen extends ConsumerWidget {
@@ -65,9 +65,9 @@ class HistoryScreen extends ConsumerWidget {
   }
 
   static String _subtitle(HistoryEntry entry) {
-    final played = formatTimeAgo(entry.playedAt);
-    final minutes = entry.durationSeconds ~/ 60;
-    if (minutes <= 0) return played;
-    return '$played · ${minutes}m played';
+    final details = ContinuePlayingCard.details(entry);
+    final plays = entry.playCount;
+    if (plays <= 1) return details;
+    return '$details · $plays plays';
   }
 }

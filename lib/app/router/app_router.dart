@@ -16,12 +16,16 @@ import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/main_shell.dart';
 import '../../features/home/presentation/screens/play_screen.dart';
 import '../../features/home/presentation/screens/splash_screen.dart';
+import '../../features/community/presentation/community_post_screen.dart';
 import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missions/presentation/missions_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/profile/presentation/account_settings_screen.dart';
+import '../../features/profile/presentation/help_support_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/progress/presentation/progress_screen.dart';
+import '../../features/reviews/presentation/my_reviews_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((Ref ref) {
@@ -80,9 +84,18 @@ final appRouterProvider = Provider<GoRouter>((Ref ref) {
       _page(AppRoutes.achievements, const AchievementsScreen()),
       _page(AppRoutes.leaderboard, const LeaderboardScreen()),
       _page(AppRoutes.community, const CommunityScreen()),
+      _page(AppRoutes.communitySaved, const CommunitySavedScreen()),
+      GoRoute(
+        path: '/community/posts/:id',
+        builder: (BuildContext context, GoRouterState state) =>
+            CommunityPostScreen(postId: state.pathParameters['id'] ?? ''),
+      ),
       _page(AppRoutes.notifications, const NotificationsScreen()),
       _page(AppRoutes.favorites, const FavoritesScreen()),
       _page(AppRoutes.history, const HistoryScreen()),
+      _page(AppRoutes.accountSettings, const AccountSettingsScreen()),
+      _page(AppRoutes.help, const HelpSupportScreen()),
+      _page(AppRoutes.myReviews, const MyReviewsScreen()),
     ],
   );
 

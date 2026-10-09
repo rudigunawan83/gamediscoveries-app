@@ -6,10 +6,14 @@ import '../../../core/network/providers/network_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/game_summary.dart';
 
+/// One game in the player's history; shared by web, Android and iOS.
 class HistoryEntry {
   const HistoryEntry({
     required this.game,
     required this.durationSeconds,
+    this.totalPlaySeconds = 0,
+    this.playCount = 0,
+    this.lastPlatform,
     this.playedAt,
   });
 
@@ -19,13 +23,35 @@ class HistoryEntry {
         json['game'] as Map<String, dynamic>? ?? const {},
       ),
       durationSeconds: parseInt(json['durationSeconds']),
+      totalPlaySeconds: parseInt(json['totalPlaySeconds']),
+      playCount: parseInt(json['playCount']),
+      lastPlatform: json['lastPlatform'] as String?,
       playedAt: parseDate(json['playedAt']),
     );
   }
 
   final GameSummary game;
+
+  /// Longest single session.
   final int durationSeconds;
+
+  /// Server-measured active time across all platforms.
+  final int totalPlaySeconds;
+  final int playCount;
+
+  /// `WEB`, `ANDROID` or `IOS` of the last finished session.
+  final String? lastPlatform;
   final DateTime? playedAt;
+
+  int get playTimeSeconds =>
+      totalPlaySeconds > 0 ? totalPlaySeconds : durationSeconds;
+
+  String? get platformLabel => switch (lastPlatform?.toUpperCase()) {
+    'WEB' => 'Web',
+    'ANDROID' => 'Android',
+    'IOS' => 'iOS',
+    _ => null,
+  };
 }
 
 /// Favorites and play history for the signed-in user.

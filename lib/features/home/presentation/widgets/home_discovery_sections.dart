@@ -8,8 +8,7 @@ import '../../../../shared/widgets/game_shelf.dart';
 import '../../../../shared/widgets/state_views.dart';
 import '../../../discovery/domain/models/home_discoveries.dart';
 import '../../../discovery/presentation/providers/discovery_providers.dart';
-import '../../../favorites/data/library_repository.dart';
-import '../../../favorites/presentation/library_providers.dart';
+import '../../../favorites/presentation/continue_playing_section.dart';
 import 'featured_carousel.dart';
 
 const double _sectionGap = 28;
@@ -53,7 +52,6 @@ class _HomeContent extends StatelessWidget {
     void seeAll() => context.go(AppRoutes.discover);
 
     final shelves = <Widget>[
-      const _ContinuePlayingShelf(),
       _RecommendedShelf(fallback: data.trending),
       FeaturedCarousel(games: data.featured),
       GameShelf(title: 'Trending Now', games: data.trending, onSeeAll: seeAll),
@@ -70,36 +68,13 @@ class _HomeContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        const ContinuePlayingSection(trailingGap: _sectionGap),
         for (final shelf in shelves) ...<Widget>[
           shelf,
           const SizedBox(height: _sectionGap),
         ],
       ],
     );
-  }
-}
-
-class _ContinuePlayingShelf extends ConsumerWidget {
-  const _ContinuePlayingShelf();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final history = ref.watch(playHistoryProvider).value;
-    if (history == null || history.isEmpty) return const SizedBox.shrink();
-
-    return GameShelf(
-      title: 'Continue Playing',
-      games: _uniqueGames(history),
-      onSeeAll: () => context.push(AppRoutes.history),
-    );
-  }
-
-  static List<GameSummary> _uniqueGames(List<HistoryEntry> entries) {
-    final seen = <String>{};
-    return <GameSummary>[
-      for (final e in entries)
-        if (seen.add(e.game.id)) e.game,
-    ];
   }
 }
 

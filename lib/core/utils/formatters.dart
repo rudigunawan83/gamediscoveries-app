@@ -28,6 +28,15 @@ String formatRemaining(DateTime? until, {DateTime? now}) {
   return '${diff.inMinutes}m left';
 }
 
+/// Play time such as `1h 5m`, `12m` or `<1m`.
+String formatPlayTime(int seconds) {
+  if (seconds < 60) return '<1m';
+  final hours = seconds ~/ 3600;
+  final minutes = (seconds % 3600) ~/ 60;
+  if (hours == 0) return '${minutes}m';
+  return minutes == 0 ? '${hours}h' : '${hours}h ${minutes}m';
+}
+
 DateTime? parseDate(Object? value) {
   return value is String ? DateTime.tryParse(value) : null;
 }

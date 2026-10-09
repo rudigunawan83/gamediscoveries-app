@@ -15,6 +15,7 @@ class LocalPreferences {
 
   static const String _onboardingDoneKey = 'onboarding.done';
   static const String _anonymousIdKey = 'analytics.anonymousId';
+  static const String _savedCommunityPostsKey = 'community.savedPosts';
 
   final SharedPreferences _prefs;
 
@@ -31,5 +32,13 @@ class LocalPreferences {
     final created = const Uuid().v4();
     _prefs.setString(_anonymousIdKey, created);
     return created;
+  }
+
+  /// JSON snapshots of bookmarked community posts, newest first.
+  List<String> get savedCommunityPosts =>
+      _prefs.getStringList(_savedCommunityPostsKey) ?? const <String>[];
+
+  Future<void> setSavedCommunityPosts(List<String> posts) {
+    return _prefs.setStringList(_savedCommunityPostsKey, posts);
   }
 }

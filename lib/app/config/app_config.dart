@@ -16,5 +16,8 @@ class AppConfig {
   static String gameShareUrl(String slug) =>
       '$webBaseUrl/game/${Uri.encodeComponent(slug)}';
 
+  static String communityPostShareUrl(String id) =>
+      '$webBaseUrl/community/post/${Uri.encodeComponent(id)}';
+
   const AppConfig._();
 }

@@ -4,6 +4,7 @@ class AuthUser {
     required this.email,
     required this.displayName,
     required this.roles,
+    this.username,
     this.avatarUrl,
   });
 
@@ -12,6 +13,7 @@ class AuthUser {
       id: json['id'] as String? ?? '',
       email: json['email'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
+      username: json['username'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       roles: ((json['roles'] as List<dynamic>?) ?? const <dynamic>[])
           .map((dynamic role) => role.toString())
@@ -22,6 +24,9 @@ class AuthUser {
   final String id;
   final String email;
   final String displayName;
+
+  /// Public handle; older API builds omit it.
+  final String? username;
   final String? avatarUrl;
   final List<String> roles;
 
