@@ -23,6 +23,17 @@ class AppConfig {
     'ADMOB_REWARDED_IOS',
   );
 
+  /// Comma-separated AdMob test device ids for our own phones. Pass them only
+  /// in local builds; store builds must leave this empty.
+  static const String admobTestDeviceIds = String.fromEnvironment(
+    'ADMOB_TEST_DEVICE_IDS',
+  );
+
+  static List<String> get admobTestDevices => <String>[
+    for (final id in admobTestDeviceIds.split(','))
+      if (id.trim().isNotEmpty) id.trim(),
+  ];
+
   static String gameShareUrl(String slug) =>
       '$webBaseUrl/game/${Uri.encodeComponent(slug)}';
 

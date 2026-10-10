@@ -56,6 +56,16 @@ class AdMobRewardedAdPlayer implements RewardedAdPlayer {
     return Platform.isIOS ? 'IOS' : 'ANDROID';
   }
 
+  static Future<InitializationStatus> _initialize() async {
+    final testDevices = AppConfig.admobTestDevices;
+    if (testDevices.isNotEmpty) {
+      await MobileAds.instance.updateRequestConfiguration(
+        RequestConfiguration(testDeviceIds: testDevices),
+      );
+    }
+    return MobileAds.instance.initialize();
+  }
+
   @override
   Future<bool> show({
     required String userId,
@@ -66,7 +76,7 @@ class AdMobRewardedAdPlayer implements RewardedAdPlayer {
       throw const RewardedAdUnavailable('Rewarded ads are not available.');
     }
 
-    await (_initialized ??= MobileAds.instance.initialize());
+    await (_initialized ??= _initialize());
 
     final loaded = Completer<RewardedAd>();
     await RewardedAd.load(
