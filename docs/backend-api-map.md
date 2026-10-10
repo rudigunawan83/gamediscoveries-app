@@ -753,7 +753,26 @@ App configuration: debug builds always use Google test units. Release uses the r
 Android unit `ca-app-pub-7799318738010798/2479454480` (override with
 `--dart-define=ADMOB_REWARDED_ANDROID=...`; iOS needs `ADMOB_REWARDED_IOS=...`). AdMob app
 id `ca-app-pub-7799318738010798~7109888079` is the Gradle default (override with
-`-PADMOB_APP_ID`); iOS app id lives in `ios/Flutter/Release.xcconfig`.
+`-PADMOB_APP_ID`); iOS app id lives in `ios/Flutter/Release.xcconfig`. To test a release
+build on our own phones, pass `--dart-define=ADMOB_TEST_DEVICE_IDS=id1,id2` (ids from the
+logcat `setTestDeviceIds` hint) so real units serve test ads; never set it for store builds.
+
+## App Updates
+
+### `GET /api/v1/app/version?platform=android|ios`
+
+- Auth required: No
+- Response: `platform`, `latestVersion`, `latestBuild`, `minSupportedBuild`, `storeUrl`, `apkUrl`
+  (Android only), `releaseNotes`
+- Builds are integer build numbers (the part after `+` in pubspec `version`)
+- Config: `AppVersion:Android|Ios` in appsettings; production overrides live in `api.env`
+- Flutter usage: `AppUpdateGate` checks once per launch. Below `minSupportedBuild` shows a
+  blocking "Update required" screen; below `latestBuild` shows a dismissible banner
+  (dismissal remembered per build). Play installs use Google Play in-app updates
+  (immediate when required, flexible otherwise) and fall back to `storeUrl`; APK installs
+  open `apkUrl` (`https://gamediscoveries.com/downloads/gamediscoveries.apk`)
+- Release an APK: bump pubspec `version`, then run `deploy/apps/publish-android-apk.ps1`
+  (`-MinSupportedBuild N` forces older builds to update)
 
 ## Leaderboards and Competitions
 

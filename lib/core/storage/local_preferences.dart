@@ -16,6 +16,7 @@ class LocalPreferences {
   static const String _onboardingDoneKey = 'onboarding.done';
   static const String _anonymousIdKey = 'analytics.anonymousId';
   static const String _savedCommunityPostsKey = 'community.savedPosts';
+  static const String _skippedUpdateBuildKey = 'appUpdate.skippedBuild';
 
   final SharedPreferences _prefs;
 
@@ -40,5 +41,12 @@ class LocalPreferences {
 
   Future<void> setSavedCommunityPosts(List<String> posts) {
     return _prefs.setStringList(_savedCommunityPostsKey, posts);
+  }
+
+  /// Newest optional update build the user chose "Later" for.
+  int get skippedUpdateBuild => _prefs.getInt(_skippedUpdateBuildKey) ?? 0;
+
+  Future<void> setSkippedUpdateBuild(int build) {
+    return _prefs.setInt(_skippedUpdateBuildKey, build);
   }
 }
