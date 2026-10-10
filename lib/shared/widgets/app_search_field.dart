@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../core/l10n/locale_resolution.dart';
 
 class AppSearchField extends StatelessWidget {
   const AppSearchField({
@@ -10,7 +11,7 @@ class AppSearchField extends StatelessWidget {
     this.onClear,
     this.readOnly = false,
     this.autofocus = false,
-    this.hint = 'Search games...',
+    this.hint,
     super.key,
   });
 
@@ -20,7 +21,9 @@ class AppSearchField extends StatelessWidget {
   final VoidCallback? onClear;
   final bool readOnly;
   final bool autofocus;
-  final String hint;
+
+  /// Defaults to the localized "Search games..." placeholder.
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +37,7 @@ class AppSearchField extends StatelessWidget {
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: hint ?? context.l10n.commonSearchGames,
         prefixIcon: const Icon(
           Icons.search_rounded,
           color: AppColors.textSecondary,
@@ -42,7 +45,7 @@ class AppSearchField extends StatelessWidget {
         suffixIcon: clear == null
             ? const Icon(Icons.tune_rounded, color: AppColors.textSecondary)
             : IconButton(
-                tooltip: 'Clear search',
+                tooltip: context.l10n.commonClearSearch,
                 onPressed: clear,
                 icon: const Icon(Icons.close_rounded),
               ),

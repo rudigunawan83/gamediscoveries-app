@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/pill_tabs.dart';
@@ -23,22 +24,21 @@ class _MissionsScreenState extends ConsumerState<MissionsScreen> {
   @override
   Widget build(BuildContext context) {
     final missions = ref.watch(myMissionsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Missions'), centerTitle: false),
+      appBar: AppBar(title: Text(l10n.navigationMissions), centerTitle: false),
       body: missions.when(
         skipLoadingOnRefresh: true,
         data: (MyMissions? data) {
           if (data == null) {
-            return const SignInRequiredView(
+            return SignInRequiredView(
               icon: Icons.flag_rounded,
-              title: 'Daily & weekly missions',
-              message:
-                  'Sign in to get missions, earn bonus XP and keep your '
-                  'streak alive.',
+              title: l10n.missionsSignInTitle,
+              message: l10n.missionsSignInMessage,
             );
           }
-          return _content(data);
+          return _content(l10n, data);
         },
         loading: () => const LoadingView(),
         error: (Object error, StackTrace stackTrace) => ErrorView(
@@ -49,7 +49,7 @@ class _MissionsScreenState extends ConsumerState<MissionsScreen> {
     );
   }
 
-  Widget _content(MyMissions data) {
+  Widget _content(AppLocalizations l10n, MyMissions data) {
     final daily = _tab == 0;
     final items = daily ? data.daily : data.weekly;
     final expiresAt = daily ? data.dailyExpiresAt : data.weeklyExpiresAt;
@@ -61,7 +61,7 @@ class _MissionsScreenState extends ConsumerState<MissionsScreen> {
         padding: const EdgeInsets.only(bottom: 32),
         children: <Widget>[
           PillTabs(
-            labels: const <String>['Daily', 'Weekly'],
+            labels: <String>[l10n.missionsDaily, l10n.missionsWeekly],
             selectedIndex: _tab,
             onChanged: (int i) => setState(() => _tab = i),
           ),
@@ -69,9 +69,9 @@ class _MissionsScreenState extends ConsumerState<MissionsScreen> {
           _MissionsBanner(daily: daily, missions: items, expiresAt: expiresAt),
           const SizedBox(height: 16),
           if (items.isEmpty)
-            const MessageView(
+            MessageView(
               icon: Icons.hourglass_empty_rounded,
-              message: 'No missions right now. New ones arrive soon.',
+              message: l10n.missionsEmpty,
             )
           else
             for (final mission in items)
@@ -104,7 +104,8 @@ class _MissionsBanner extends StatelessWidget {
       0,
       (int sum, Mission m) => sum + m.rewardXp,
     );
-    final remaining = formatRemaining(expiresAt);
+    final l10n = context.l10n;
+    final remaining = formatRemaining(l10n, expiresAt);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -127,15 +128,15 @@ class _MissionsBanner extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     daily
-                        ? 'Complete Daily Missions'
-                        : 'Complete Weekly Missions',
+                        ? l10n.missionsCompleteDaily
+                        : l10n.missionsCompleteWeekly,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Earn up to ${formatGrouped(bonus)} XP'
+                    '${l10n.missionsEarnUpTo(bonus)}'
                     '${remaining.isEmpty ? '' : ' · $remaining'}',
                     style: textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
@@ -147,7 +148,7 @@ class _MissionsBanner extends StatelessWidget {
                       Expanded(
                         child: XpProgressBar(
                           value: missions.isEmpty ? 0 : done / missions.length,
-                          semanticLabel: 'Missions completed',
+                          semanticLabel: l10n.missionsCompletedSemantics,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -254,7 +255,7 @@ class MissionCard extends StatelessWidget {
                   size: 28,
                 )
               : Text(
-                  '+${formatGrouped(mission.rewardXp)} XP',
+                  context.l10n.commonXpReward(mission.rewardXp),
                   style: const TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.w900,

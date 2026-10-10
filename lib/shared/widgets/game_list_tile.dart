@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_routes.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/l10n/locale_resolution.dart';
 import '../models/game_summary.dart';
 import 'game_card.dart';
 
@@ -79,7 +80,10 @@ class GameListTile extends StatelessWidget {
                     ],
                     if (game.mobileReady) ...<Widget>[
                       const SizedBox(height: 6),
-                      const _Badge(label: 'Mobile', color: AppColors.success),
+                      _Badge(
+                        label: context.l10n.commonMobileBadge,
+                        color: AppColors.success,
+                      ),
                     ],
                   ],
                 ),

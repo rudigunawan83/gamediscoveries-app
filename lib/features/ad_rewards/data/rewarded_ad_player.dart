@@ -7,13 +7,15 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../../app/config/app_config.dart';
 
-class RewardedAdUnavailable implements Exception {
-  const RewardedAdUnavailable(this.message);
+enum RewardedAdFailure { notConfigured, noVideo, showFailed }
 
-  final String message;
+class RewardedAdUnavailable implements Exception {
+  const RewardedAdUnavailable(this.reason);
+
+  final RewardedAdFailure reason;
 
   @override
-  String toString() => message;
+  String toString() => 'RewardedAdUnavailable(${reason.name})';
 }
 
 /// Loads and shows one rewarded video tagged for server-side verification.
@@ -73,7 +75,7 @@ class AdMobRewardedAdPlayer implements RewardedAdPlayer {
   }) async {
     final unitId = _adUnitId;
     if (unitId == null) {
-      throw const RewardedAdUnavailable('Rewarded ads are not available.');
+      throw const RewardedAdUnavailable(RewardedAdFailure.notConfigured);
     }
 
     await (_initialized ??= _initialize());
@@ -85,14 +87,14 @@ class AdMobRewardedAdPlayer implements RewardedAdPlayer {
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: loaded.complete,
         onAdFailedToLoad: (LoadAdError error) => loaded.completeError(
-          const RewardedAdUnavailable('No video available right now.'),
+          const RewardedAdUnavailable(RewardedAdFailure.noVideo),
         ),
       ),
     );
     final ad = await loaded.future.timeout(
       const Duration(seconds: 30),
       onTimeout: () =>
-          throw const RewardedAdUnavailable('No video available right now.'),
+          throw const RewardedAdUnavailable(RewardedAdFailure.noVideo),
     );
 
     await ad.setServerSideOptions(
@@ -110,7 +112,7 @@ class AdMobRewardedAdPlayer implements RewardedAdPlayer {
         ad.dispose();
         if (!closed.isCompleted) {
           closed.completeError(
-            const RewardedAdUnavailable('The video could not be shown.'),
+            const RewardedAdUnavailable(RewardedAdFailure.showFailed),
           );
         }
       },

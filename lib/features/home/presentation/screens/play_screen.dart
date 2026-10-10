@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/models/game_summary.dart';
 import '../../../../shared/widgets/game_list_tile.dart';
 import '../../../../shared/widgets/section_header.dart';
@@ -18,9 +19,10 @@ class PlayScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quickPlay = ref.watch(quickPlayProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Play'), centerTitle: false),
+      appBar: AppBar(title: Text(l10n.navigationPlay), centerTitle: false),
       body: RefreshIndicator(
         onRefresh: () {
           ref.invalidate(playHistoryProvider);
@@ -32,14 +34,14 @@ class PlayScreen extends ConsumerWidget {
           children: <Widget>[
             const SizedBox(height: 8),
             const ContinuePlayingSection(trailingGap: 24),
-            const SectionHeader(title: 'Quick Play'),
+            SectionHeader(title: l10n.playQuickPlay),
             const SizedBox(height: 12),
             quickPlay.when(
               data: (List<GameSummary> games) {
                 if (games.isEmpty) {
-                  return const MessageView(
+                  return MessageView(
                     icon: Icons.sports_esports_outlined,
-                    message: 'No quick play picks right now.',
+                    message: l10n.playEmpty,
                   );
                 }
                 return Column(
@@ -81,7 +83,7 @@ class _PlayButton extends StatelessWidget {
         color: AppColors.gold,
         shape: const CircleBorder(),
         child: IconButton(
-          tooltip: 'Play now',
+          tooltip: context.l10n.playNowTooltip,
           onPressed: () => context.push(AppRoutes.gamePlay(slug)),
           icon: const Icon(Icons.play_arrow_rounded, color: AppColors.onGold),
         ),

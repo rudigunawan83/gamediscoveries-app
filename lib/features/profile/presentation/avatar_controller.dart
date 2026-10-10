@@ -12,12 +12,14 @@ class AvatarTooLargeException implements Exception {
   const AvatarTooLargeException();
 
   @override
-  String toString() => 'Image must be 5 MB or smaller.';
+  String toString() =>
+      'Image must be ${AvatarController.maxUploadMb} MB or smaller.';
 }
 
 /// `true` while an avatar upload or removal is in flight.
 class AvatarController extends Notifier<bool> {
-  static const int maxUploadBytes = 5 * 1024 * 1024;
+  static const int maxUploadMb = 5;
+  static const int maxUploadBytes = maxUploadMb * 1024 * 1024;
 
   @override
   bool build() => false;

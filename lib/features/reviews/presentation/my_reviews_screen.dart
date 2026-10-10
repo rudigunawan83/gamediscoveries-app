@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/game_card.dart';
 import '../../../shared/widgets/state_views.dart';
@@ -18,25 +19,26 @@ class MyReviewsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reviews = ref.watch(myReviewsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Reviews')),
+      appBar: AppBar(title: Text(l10n.profileMyReviews)),
       body: reviews.when(
         skipLoadingOnRefresh: true,
         data: (List<MyReview>? items) {
           if (items == null) {
-            return const SignInRequiredView(
+            return SignInRequiredView(
               icon: Icons.rate_review_rounded,
-              title: 'Your reviews',
-              message: 'Sign in to see and manage the reviews you wrote.',
+              title: l10n.reviewsSignInTitle,
+              message: l10n.reviewsSignInMessage,
             );
           }
           if (items.isEmpty) {
             return MessageView(
               icon: Icons.rate_review_outlined,
-              title: 'No reviews yet',
-              message: 'Play a game, then share what you think on its page.',
-              actionLabel: 'Find a Game',
+              title: l10n.reviewsEmptyTitle,
+              message: l10n.reviewsEmptyMessage,
+              actionLabel: l10n.commonFindGame,
               onAction: () => context.go(AppRoutes.discover),
             );
           }
@@ -72,22 +74,23 @@ class _ReviewCard extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete review?'),
-        content: Text('Your review of ${review.gameTitle} will be removed.'),
+        title: Text(l10n.reviewsDeleteTitle),
+        content: Text(l10n.reviewsDeleteMessage(review.gameTitle)),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.danger),
+            child: Text(
+              l10n.commonDelete,
+              style: const TextStyle(color: AppColors.danger),
             ),
           ),
         ],
@@ -98,10 +101,10 @@ class _ReviewCard extends ConsumerWidget {
     try {
       await ref.read(myReviewsRepositoryProvider).deleteReview(review.id);
       ref.invalidate(myReviewsProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Review deleted')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.reviewsDeleted)));
     } catch (error) {
       messenger.showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+        SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
       );
     }
   }
@@ -109,6 +112,7 @@ class _ReviewCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final edited = review.updatedAt ?? review.createdAt;
 
     return Material(
@@ -152,7 +156,7 @@ class _ReviewCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Semantics(
-                          label: 'Rated ${review.rating} out of 5',
+                          label: l10n.reviewsRatedSemantics(review.rating),
                           excludeSemantics: true,
                           child: Row(
                             children: <Widget>[
@@ -171,7 +175,7 @@ class _ReviewCard extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Delete review',
+                    tooltip: l10n.reviewsDeleteTooltip,
                     onPressed: () => _delete(context, ref),
                     icon: const Icon(
                       Icons.delete_outline_rounded,
@@ -196,7 +200,7 @@ class _ReviewCard extends ConsumerWidget {
               Row(
                 children: <Widget>[
                   Text(
-                    formatTimeAgo(edited),
+                    formatTimeAgo(l10n, edited),
                     style: textTheme.labelSmall?.copyWith(
                       color: AppColors.textMuted,
                     ),
@@ -204,7 +208,7 @@ class _ReviewCard extends ConsumerWidget {
                   if (review.isHidden) ...<Widget>[
                     const SizedBox(width: 8),
                     Text(
-                      'Hidden by moderators',
+                      l10n.reviewsHidden,
                       style: textTheme.labelSmall?.copyWith(
                         color: AppColors.danger,
                         fontWeight: FontWeight.w700,

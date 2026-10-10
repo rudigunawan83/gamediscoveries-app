@@ -2,13 +2,12 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json_parsing.dart';
 
 enum LeaderboardScope {
-  global('Global', 'ALL_TIME'),
-  weekly('Weekly', 'WEEKLY'),
-  monthly('Monthly', 'MONTHLY');
+  global('ALL_TIME'),
+  weekly('WEEKLY'),
+  monthly('MONTHLY');
 
-  const LeaderboardScope(this.label, this.type);
+  const LeaderboardScope(this.type);
 
-  final String label;
   final String type;
 }
 
@@ -54,7 +53,7 @@ class LeaderboardEntry {
       userId: user['id'] as String? ?? '',
       name: (displayName?.isNotEmpty ?? false)
           ? displayName!
-          : (username ?? 'Player'),
+          : (username ?? ''),
       avatarUrl: user['avatarUrl'] as String?,
       score: parseInt(json['score']),
       gamesPlayed: parseInt(json['gamesPlayed']),
@@ -65,6 +64,8 @@ class LeaderboardEntry {
 
   final int rank;
   final String userId;
+
+  /// Empty when the server sent neither a display name nor a username.
   final String name;
   final String? avatarUrl;
   final int score;

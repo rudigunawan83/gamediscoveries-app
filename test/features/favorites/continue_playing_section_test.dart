@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gamediscoveries_mobile/core/l10n/locale_resolution.dart';
 import 'package:gamediscoveries_mobile/core/utils/formatters.dart';
 import 'package:gamediscoveries_mobile/features/favorites/data/library_repository.dart';
 import 'package:gamediscoveries_mobile/features/favorites/presentation/continue_playing_section.dart';
 import 'package:gamediscoveries_mobile/features/favorites/presentation/library_providers.dart';
 import 'package:gamediscoveries_mobile/shared/models/game_summary.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../helpers/localized_app.dart';
 
 GameSummary _game(String title) => GameSummary(
   id: title,
@@ -57,30 +60,45 @@ Widget _app(List<HistoryEntry>? history) {
   );
   return ProviderScope(
     overrides: [playHistoryProvider.overrideWith((Ref ref) async => history)],
-    child: MaterialApp.router(routerConfig: router),
+    child: localizedRouterApp(router),
   );
 }
 
 void main() {
   test('formatPlayTime', () {
-    expect(formatPlayTime(0), '<1m');
-    expect(formatPlayTime(59), '<1m');
-    expect(formatPlayTime(720), '12m');
-    expect(formatPlayTime(3600), '1h');
-    expect(formatPlayTime(3900), '1h 5m');
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(formatPlayTime(en, 0), '<1m');
+    expect(formatPlayTime(en, 59), '<1m');
+    expect(formatPlayTime(en, 720), '12m');
+    expect(formatPlayTime(en, 3600), '1h');
+    expect(formatPlayTime(en, 3900), '1h 5m');
+
+    final id = lookupAppLocalizations(const Locale('id'));
+    expect(formatPlayTime(id, 30), '<1 mnt');
+    expect(formatPlayTime(id, 3900), '1 j 5 mnt');
   });
 
   test('details prefers server total and shows last platform', () {
+    final en = lookupAppLocalizations(const Locale('en'));
     final details = ContinuePlayingCard.details(
+      en,
       _entry('Cut Rope', total: 3900, duration: 60, platform: 'WEB'),
     );
     expect(details, startsWith('on Web · '));
     expect(details, endsWith(' · 1h 5m total'));
 
     expect(
-      ContinuePlayingCard.details(_entry('Old', duration: 120)),
+      ContinuePlayingCard.details(en, _entry('Old', duration: 120)),
       isNot(contains('on ')),
     );
+
+    final id = lookupAppLocalizations(const Locale('id'));
+    final localized = ContinuePlayingCard.details(
+      id,
+      _entry('Cut Rope', total: 3900, platform: 'WEB'),
+    );
+    expect(localized, startsWith('di Web · '));
+    expect(localized, endsWith(' · total 1 j 5 mnt'));
   });
 
   testWidgets('hidden for guests and empty history', (WidgetTester t) async {

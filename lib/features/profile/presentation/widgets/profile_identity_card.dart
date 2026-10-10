@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/widgets/gd_avatar.dart';
 
 class ProfileIdentityCard extends StatelessWidget {
@@ -108,7 +109,9 @@ class _EditableAvatar extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: !busy,
-      label: busy ? 'Uploading avatar' : 'Change avatar',
+      label: busy
+          ? context.l10n.profileUploadingAvatar
+          : context.l10n.profileChangeAvatar,
       excludeSemantics: true,
       child: GestureDetector(
         onTap: busy ? null : edit,

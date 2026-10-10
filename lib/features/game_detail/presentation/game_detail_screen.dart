@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../app/config/app_config.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/game_summary.dart';
 import '../../../shared/widgets/game_card.dart';
@@ -20,11 +21,11 @@ import '../domain/game_detail.dart';
 import 'game_detail_providers.dart';
 
 const double _heroHeight = 280;
-const List<String> _tabs = <String>[
-  'About',
-  'How to Play',
-  'Reviews',
-  'Similar',
+List<String> _tabs(AppLocalizations l10n) => <String>[
+  l10n.gameTabAbout,
+  l10n.gameTabHowToPlay,
+  l10n.gameTabReviews,
+  l10n.gameTabSimilar,
 ];
 
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -59,6 +60,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   Widget _content(BuildContext context, GameDetail game) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final canPlay = game.playUrl != null;
     void play() {
       enterGameDisplayMode(landscape: game.isLandscape);
@@ -73,8 +75,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           backgroundColor: AppColors.night,
           actions: <Widget>[
             IconButton(
-              tooltip: 'Share',
-              onPressed: () => _share(game),
+              tooltip: l10n.commonShare,
+              onPressed: () => _share(l10n, game),
               icon: const Icon(Icons.share_rounded),
             ),
           ],
@@ -102,9 +104,14 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     if (game.category?.isNotEmpty ?? false)
                       _Chip(label: game.category!, color: AppColors.gold),
                     if (game.mobileReady)
-                      const _Chip(label: 'Mobile', color: AppColors.success),
+                      _Chip(
+                        label: l10n.commonMobileBadge,
+                        color: AppColors.success,
+                      ),
                     _Chip(
-                      label: game.isLandscape ? 'Landscape' : 'Portrait',
+                      label: game.isLandscape
+                          ? l10n.gameLandscape
+                          : l10n.gamePortrait,
                       color: AppColors.blue,
                     ),
                     for (final tag in game.tags.take(3))
@@ -120,7 +127,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       child: ElevatedButton.icon(
                         onPressed: canPlay ? play : null,
                         icon: const Icon(Icons.play_arrow_rounded, size: 26),
-                        label: Text(canPlay ? 'Play Now' : 'Not available'),
+                        label: Text(
+                          canPlay ? l10n.gamePlayNow : l10n.gameNotAvailable,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -128,8 +137,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     const SizedBox(width: 10),
                     _SquareAction(
                       child: IconButton(
-                        tooltip: 'Share',
-                        onPressed: () => _share(game),
+                        tooltip: l10n.commonShare,
+                        onPressed: () => _share(l10n, game),
                         icon: const Icon(
                           Icons.share_outlined,
                           color: AppColors.textSecondary,
@@ -146,7 +155,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         SliverToBoxAdapter(
           child: PillTabs(
             expanded: false,
-            labels: _tabs,
+            labels: _tabs(l10n),
             selectedIndex: _tab,
             onChanged: (int i) => setState(() => _tab = i),
           ),
@@ -157,11 +166,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             child: switch (_tab) {
               0 => _TextSection(
                 text: game.description,
-                empty: 'No description yet.',
+                empty: l10n.gameNoDescription,
               ),
               1 => _TextSection(
                 text: game.instructions,
-                empty: 'Just tap Play Now and follow the in-game tutorial.',
+                empty: l10n.gameDefaultInstructions,
               ),
               2 => _ReviewsSection(slug: game.slug),
               _ => _SimilarGrid(gameId: game.id),
@@ -175,12 +184,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  Future<void> _share(GameDetail game) {
+  Future<void> _share(AppLocalizations l10n, GameDetail game) {
     return SharePlus.instance.share(
       ShareParams(
-        text:
-            'Play ${game.title} on GameDiscoveries: '
-            '${AppConfig.gameShareUrl(game.slug)}',
+        text: l10n.gameShareText(game.title, AppConfig.gameShareUrl(game.slug)),
         subject: game.title,
       ),
     );
@@ -238,7 +245,7 @@ class _Hero extends StatelessWidget {
           Center(
             child: Semantics(
               button: true,
-              label: 'Play ${game.title}',
+              label: context.l10n.gamePlaySemantics(game.title),
               child: GestureDetector(
                 onTap: play,
                 child: Container(
@@ -302,6 +309,7 @@ class _RatingRow extends ConsumerWidget {
       context,
     ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
     final dev = developer;
+    final l10n = context.l10n;
 
     return Row(
       children: <Widget>[
@@ -309,19 +317,19 @@ class _RatingRow extends ConsumerWidget {
         const SizedBox(width: 4),
         Text(
           reviews == null || reviews.reviewCount == 0
-              ? 'No ratings yet'
+              ? l10n.gameNoRatings
               : reviews.averageRating.toStringAsFixed(1),
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         if (reviews != null && reviews.reviewCount > 0) ...<Widget>[
           const SizedBox(width: 4),
-          Text('(${formatCompact(reviews.reviewCount)} reviews)', style: style),
+          Text(l10n.gameReviewCount(reviews.reviewCount), style: style),
         ],
         if (dev != null && dev.isNotEmpty) ...<Widget>[
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'by $dev',
+              l10n.gameByDeveloper(dev),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: style,
@@ -385,10 +393,7 @@ class _ReviewsSection extends ConsumerWidget {
     return reviews.when(
       data: (ReviewSummary data) {
         if (data.items.isEmpty) {
-          return const _TextSection(
-            text: null,
-            empty: 'No reviews yet. Be the first after you play!',
-          );
+          return _TextSection(text: null, empty: context.l10n.gameNoReviews);
         }
 
         return Column(
@@ -463,7 +468,7 @@ class _ReviewTile extends StatelessWidget {
           ],
           const SizedBox(height: 6),
           Text(
-            formatTimeAgo(review.createdAt),
+            formatTimeAgo(context.l10n, review.createdAt),
             style: textTheme.labelSmall?.copyWith(color: AppColors.textMuted),
           ),
         ],
@@ -484,7 +489,7 @@ class _SimilarShelf extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.only(top: 28),
-      child: GameShelf(title: 'Similar Games', games: games),
+      child: GameShelf(title: context.l10n.gameSimilarGames, games: games),
     );
   }
 }
@@ -501,10 +506,7 @@ class _SimilarGrid extends ConsumerWidget {
     return games.when(
       data: (List<GameSummary> items) {
         if (items.isEmpty) {
-          return const _TextSection(
-            text: null,
-            empty: 'No similar games found.',
-          );
+          return _TextSection(text: null, empty: context.l10n.gameNoSimilar);
         }
 
         return LayoutBuilder(

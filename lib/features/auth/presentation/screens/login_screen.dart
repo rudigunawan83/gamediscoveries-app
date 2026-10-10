@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/error_messages.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../core/network/api_exception.dart';
 import '../providers/auth_session_controller.dart';
 import '../widgets/auth_form_scaffold.dart';
@@ -21,7 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _password = TextEditingController();
   bool _submitting = false;
   bool _obscure = true;
-  String? _error;
+  Object? _error;
 
   @override
   void dispose() {
@@ -46,23 +47,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.canPop() ? context.pop() : context.go(AppRoutes.home);
     } catch (error) {
       if (!mounted) return;
-      setState(() {
-        _error =
-            error is ApiException &&
-                (error.statusCode == 400 || error.statusCode == 401)
-            ? 'Incorrect email or password.'
-            : friendlyErrorMessage(error);
-      });
+      setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
+  String? _errorText(AppLocalizations l10n) {
+    final error = _error;
+    if (error == null) return null;
+    return error is ApiException &&
+            (error.statusCode == 400 || error.statusCode == 401)
+        ? l10n.authInvalidCredentials
+        : friendlyErrorMessage(l10n, error);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return AuthFormScaffold(
-      title: 'Welcome back',
-      subtitle: 'Sign in to keep your XP, streak and achievements.',
+      title: l10n.authLoginTitle,
+      subtitle: l10n.authLoginSubtitle,
       children: <Widget>[
         Form(
           key: _formKey,
@@ -74,11 +80,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const <String>[AutofillHints.email],
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Email',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
+                  decoration: InputDecoration(
+                    hintText: l10n.authEmailHint,
+                    prefixIcon: const Icon(Icons.mail_outline_rounded),
                   ),
-                  validator: validateEmail,
+                  validator: (String? v) => validateEmail(l10n, v),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -88,10 +94,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: l10n.authPasswordHint,
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
-                      tooltip: _obscure ? 'Show password' : 'Hide password',
+                      tooltip: _obscure
+                          ? l10n.authShowPassword
+                          : l10n.authHidePassword,
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure
@@ -101,14 +109,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   validator: (String? v) =>
-                      (v ?? '').isEmpty ? 'Password is required.' : null,
+                      (v ?? '').isEmpty ? l10n.authPasswordRequired : null,
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 20),
-        AuthErrorText(_error),
+        AuthErrorText(_errorText(l10n)),
         ElevatedButton(
           onPressed: _submitting ? null : _submit,
           child: _submitting
@@ -116,12 +124,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   dimension: 22,
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
-              : const Text('Sign In'),
+              : Text(l10n.commonSignIn),
         ),
         const SizedBox(height: 12),
         TextButton(
           onPressed: () => context.pushReplacement(AppRoutes.register),
-          child: const Text("Don't have an account? Create one"),
+          child: Text(l10n.authNoAccount),
         ),
       ],
     );

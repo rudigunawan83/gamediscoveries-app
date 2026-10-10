@@ -8,6 +8,7 @@ import '../../../app/config/app_config.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/gd_avatar.dart';
 import '../../auth/presentation/providers/auth_session_controller.dart';
@@ -20,22 +21,25 @@ void showCommunitySignInPrompt(BuildContext context, String message) {
     SnackBar(
       content: Text(message),
       action: SnackBarAction(
-        label: 'Sign In',
+        label: context.l10n.commonSignIn,
         onPressed: () => context.push(AppRoutes.login),
       ),
     ),
   );
 }
 
-Future<void> shareCommunityPost(CommunityPost post) {
+Future<void> shareCommunityPost(AppLocalizations l10n, CommunityPost post) {
   final postId = post.postId;
   if (postId == null) return Future<void>.value();
-  final title = post.title.isEmpty ? 'a community post' : post.title;
+  final title = post.title.isEmpty
+      ? l10n.communityShareFallbackTitle
+      : post.title;
   return SharePlus.instance.share(
     ShareParams(
-      text:
-          'Check out "$title" on GameDiscoveries: '
-          '${AppConfig.communityPostShareUrl(postId)}',
+      text: l10n.communityShareText(
+        title,
+        AppConfig.communityPostShareUrl(postId),
+      ),
       subject: post.title,
     ),
   );
@@ -48,6 +52,7 @@ Future<void> toggleSavedCommunityPost(
 ) async {
   final notifier = ref.read(savedCommunityPostsProvider.notifier);
   final wasSaved = notifier.isSaved(post.postId);
+  final l10n = context.l10n;
   final messenger = ScaffoldMessenger.of(context);
   await notifier.toggle(post);
   messenger
@@ -55,19 +60,40 @@ Future<void> toggleSavedCommunityPost(
     ..showSnackBar(
       SnackBar(
         content: Text(
-          wasSaved ? 'Removed from saved.' : 'Saved to your posts.',
+          wasSaved
+              ? l10n.communityRemovedFromSaved
+              : l10n.communitySavedToPosts,
         ),
       ),
     );
 }
 
+/// The section a post lives in, e.g. "Discussions".
+String communitySectionLabel(AppLocalizations l10n, CommunityPost post) =>
+    switch (post.type) {
+      'discussion' => l10n.communitySectionDiscussions,
+      'question' => l10n.communitySectionQuestions,
+      'recommendation' => l10n.communitySectionRecommendations,
+      'game_share' => l10n.communitySectionGameShares,
+      'achievement_share' => l10n.communitySectionAchievements,
+      _ => post.typeLabel,
+    };
+
+String communitySortLabel(AppLocalizations l10n, CommunityPostSort sort) =>
+    switch (sort) {
+      CommunityPostSort.latest => l10n.communitySortLatest,
+      CommunityPostSort.trending => l10n.communitySortTrending,
+      CommunityPostSort.mostLiked => l10n.communitySortMostLiked,
+    };
+
 enum _PostMenuAction { share, save, report, delete }
 
-const Map<String, String> _reportReasons = <String, String>{
-  'spam': 'Spam',
-  'harassment': 'Harassment',
-  'misleading': 'Misleading',
-  'other': 'Something else',
+/// Report reason codes sent to the API, with their localized labels.
+Map<String, String> _reportReasons(AppLocalizations l10n) => <String, String>{
+  'spam': l10n.communityReportSpam,
+  'harassment': l10n.communityReportHarassment,
+  'misleading': l10n.communityReportMisleading,
+  'other': l10n.communityReportOther,
 };
 
 /// Share / bookmark / report / delete sheet for a post.
@@ -81,6 +107,7 @@ Future<void> showCommunityPostMenu(
   final viewerId = ref.read(authSessionControllerProvider).value?.user?.id;
   final isMine = viewerId != null && viewerId == post.author.id;
   final saved = ref.read(savedCommunityPostsProvider.notifier).isSaved(postId);
+  final l10n = context.l10n;
 
   final action = await showModalBottomSheet<_PostMenuAction>(
     context: context,
@@ -92,7 +119,7 @@ Future<void> showCommunityPostMenu(
         children: <Widget>[
           ListTile(
             leading: const Icon(Icons.ios_share_rounded),
-            title: const Text('Share post'),
+            title: Text(l10n.communitySharePost),
             onTap: () => Navigator.of(context).pop(_PostMenuAction.share),
           ),
           ListTile(
@@ -101,13 +128,15 @@ Future<void> showCommunityPostMenu(
                   ? Icons.bookmark_remove_rounded
                   : Icons.bookmark_add_rounded,
             ),
-            title: Text(saved ? 'Remove from saved' : 'Save post'),
+            title: Text(
+              saved ? l10n.communityRemoveFromSaved : l10n.communitySavePost,
+            ),
             onTap: () => Navigator.of(context).pop(_PostMenuAction.save),
           ),
           if (!isMine)
             ListTile(
               leading: const Icon(Icons.flag_outlined),
-              title: const Text('Report post'),
+              title: Text(l10n.communityReportPost),
               onTap: () => Navigator.of(context).pop(_PostMenuAction.report),
             ),
           if (isMine)
@@ -116,9 +145,9 @@ Future<void> showCommunityPostMenu(
                 Icons.delete_outline_rounded,
                 color: AppColors.danger,
               ),
-              title: const Text(
-                'Delete post',
-                style: TextStyle(color: AppColors.danger),
+              title: Text(
+                l10n.communityDeletePost,
+                style: const TextStyle(color: AppColors.danger),
               ),
               onTap: () => Navigator.of(context).pop(_PostMenuAction.delete),
             ),
@@ -130,7 +159,7 @@ Future<void> showCommunityPostMenu(
 
   switch (action) {
     case _PostMenuAction.share:
-      await shareCommunityPost(post);
+      await shareCommunityPost(l10n, post);
     case _PostMenuAction.save:
       await toggleSavedCommunityPost(context, ref, post);
     case _PostMenuAction.report:
@@ -146,8 +175,9 @@ Future<void> _reportPost(
   String postId, {
   required bool signedIn,
 }) async {
+  final l10n = context.l10n;
   if (!signedIn) {
-    showCommunitySignInPrompt(context, 'Sign in to report posts.');
+    showCommunitySignInPrompt(context, l10n.communitySignInToReport);
     return;
   }
 
@@ -155,9 +185,9 @@ Future<void> _reportPost(
     context: context,
     builder: (BuildContext context) => SimpleDialog(
       backgroundColor: AppColors.surface,
-      title: const Text('Why are you reporting this?'),
+      title: Text(l10n.communityReportTitle),
       children: <Widget>[
-        for (final entry in _reportReasons.entries)
+        for (final entry in _reportReasons(l10n).entries)
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(entry.key),
             child: Padding(
@@ -175,12 +205,10 @@ Future<void> _reportPost(
     await ref
         .read(communityRepositoryProvider)
         .reportPost(postId, reason: reason);
-    messenger.showSnackBar(
-      const SnackBar(content: Text("Thanks, we'll review this post.")),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(l10n.communityReportThanks)));
   } catch (error) {
     messenger.showSnackBar(
-      SnackBar(content: Text(friendlyErrorMessage(error))),
+      SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
     );
   }
 }
@@ -192,23 +220,24 @@ Future<void> _deletePost(
 ) async {
   final postId = post.postId;
   if (postId == null) return;
+  final l10n = context.l10n;
 
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (BuildContext context) => AlertDialog(
       backgroundColor: AppColors.surface,
-      title: const Text('Delete post?'),
-      content: const Text('Your post and its comments will be removed.'),
+      title: Text(l10n.communityDeletePostTitle),
+      content: Text(l10n.communityDeletePostMessage),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(l10n.commonCancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text(
-            'Delete',
-            style: TextStyle(color: AppColors.danger),
+          child: Text(
+            l10n.commonDelete,
+            style: const TextStyle(color: AppColors.danger),
           ),
         ),
       ],
@@ -222,10 +251,10 @@ Future<void> _deletePost(
     await ref.read(communityRepositoryProvider).deletePost(postId);
     if (saved.isSaved(postId)) await saved.toggle(post);
     ref.invalidate(communityPostsProvider);
-    messenger.showSnackBar(const SnackBar(content: Text('Post deleted.')));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.communityPostDeleted)));
   } catch (error) {
     messenger.showSnackBar(
-      SnackBar(content: Text(friendlyErrorMessage(error))),
+      SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
     );
   }
 }
@@ -245,7 +274,7 @@ class CommunityLevelBadge extends StatelessWidget {
         border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Text(
-        'Lv $level',
+        context.l10n.commonLevelShort(level),
         style: const TextStyle(
           color: AppColors.gold,
           fontSize: 12,
@@ -272,7 +301,8 @@ class CommunityAuthorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level = post.author.level;
-    final section = post.sectionLabel;
+    final l10n = context.l10n;
+    final section = communitySectionLabel(l10n, post);
     final trail = trailing;
     const muted = TextStyle(color: AppColors.textMuted, fontSize: 13);
 
@@ -308,7 +338,7 @@ class CommunityAuthorHeader extends StatelessWidget {
                   ],
                   if (post.createdAt != null)
                     Text(
-                      '  •  ${formatTimeAgo(post.createdAt)}',
+                      '  •  ${formatTimeAgo(l10n, post.createdAt)}',
                       maxLines: 1,
                       style: muted,
                     ),
@@ -326,7 +356,7 @@ class CommunityAuthorHeader extends StatelessWidget {
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
-                        'in $section',
+                        l10n.communityInSection(section),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: muted,
@@ -437,7 +467,7 @@ class CommunityPostCard extends StatelessWidget {
                 CommunityAuthorHeader(
                   post: post,
                   trailing: IconButton(
-                    tooltip: 'More options',
+                    tooltip: context.l10n.communityMoreOptions,
                     visualDensity: VisualDensity.compact,
                     onPressed: onMore,
                     icon: const Icon(Icons.more_horiz_rounded),
@@ -491,7 +521,7 @@ class _GameBanner extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Open ${game.title}',
+      label: context.l10n.communityOpenGame(game.title),
       child: Material(
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
@@ -657,7 +687,7 @@ class _SideThumb extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Open ${game.title}',
+      label: context.l10n.communityOpenGame(game.title),
       child: Material(
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
@@ -700,6 +730,7 @@ class _ActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final like = onLike;
+    final l10n = context.l10n;
     const countStyle = TextStyle(
       color: AppColors.textSecondary,
       fontWeight: FontWeight.w600,
@@ -714,7 +745,7 @@ class _ActionBar extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Semantics(
-                  label: '${post.reactionCount} likes',
+                  label: l10n.communityLikesSemantics(post.reactionCount),
                   excludeSemantics: true,
                   child: Row(
                     children: <Widget>[
@@ -725,7 +756,7 @@ class _ActionBar extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        formatCompact(post.reactionCount),
+                        formatCompact(l10n, post.reactionCount),
                         style: countStyle,
                       ),
                     ],
@@ -740,12 +771,14 @@ class _ActionBar extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 21),
                   label: Text(
-                    formatCompact(post.commentCount),
+                    formatCompact(l10n, post.commentCount),
                     style: countStyle,
                   ),
                 ),
                 IconButton(
-                  tooltip: saved ? 'Remove from saved' : 'Save post',
+                  tooltip: saved
+                      ? l10n.communityRemoveFromSaved
+                      : l10n.communitySavePost,
                   onPressed: onToggleSave,
                   color: saved ? AppColors.gold : AppColors.textSecondary,
                   icon: Icon(
@@ -755,7 +788,7 @@ class _ActionBar extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Share post',
+                  tooltip: l10n.communitySharePost,
                   onPressed: onShare,
                   color: AppColors.textSecondary,
                   icon: const Icon(Icons.ios_share_rounded),
@@ -779,11 +812,12 @@ class _LikeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = liked ? AppColors.onGold : AppColors.gold;
+    final l10n = context.l10n;
 
     return Semantics(
       button: true,
       toggled: liked,
-      label: liked ? 'Unlike post' : 'Like post',
+      label: liked ? l10n.communityUnlikePost : l10n.communityLikePost,
       excludeSemantics: true,
       child: Material(
         color: liked ? AppColors.gold : AppColors.gold.withValues(alpha: 0.08),
@@ -807,7 +841,7 @@ class _LikeButton extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    liked ? 'Liked' : 'Like',
+                    liked ? l10n.communityLiked : l10n.communityLike,
                     style: TextStyle(
                       color: foreground,
                       fontWeight: FontWeight.w800,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 
 /// A tappable profile row. A `null` [onTap] renders the row as unavailable
 /// with a "Soon" badge instead of a chevron, so it never looks actionable.
@@ -128,7 +129,9 @@ class _ProfileMenuItemState extends State<ProfileMenuItem> {
     return Semantics(
       button: enabled,
       enabled: enabled,
-      label: enabled ? widget.label : '${widget.label}, coming soon',
+      label: enabled
+          ? widget.label
+          : context.l10n.profileComingSoonSemantics(widget.label),
       excludeSemantics: true,
       onTap: widget.onTap,
       child: AnimatedScale(
@@ -194,9 +197,9 @@ class _SoonBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
       ),
-      child: const Text(
-        'Soon',
-        style: TextStyle(
+      child: Text(
+        context.l10n.commonSoon,
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color: AppColors.gold,

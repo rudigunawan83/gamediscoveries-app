@@ -10,6 +10,8 @@ import 'package:gamediscoveries_mobile/features/community/data/community_reposit
 import 'package:gamediscoveries_mobile/features/community/domain/community_models.dart';
 import 'package:gamediscoveries_mobile/features/community/presentation/community_post_screen.dart';
 import 'package:gamediscoveries_mobile/features/community/presentation/community_screen.dart';
+
+import '../../helpers/localized_app.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -178,6 +180,7 @@ Widget _app(
   _FakeRepository repository, {
   bool signedIn = true,
   String initialLocation = '/community/posts/p1',
+  Locale locale = const Locale('en'),
 }) {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -218,7 +221,7 @@ Widget _app(
       communityRepositoryProvider.overrideWithValue(repository),
       sharedPreferencesProvider.overrideWithValue(_prefs),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: localizedRouterApp(router, locale: locale),
   );
 }
 
@@ -324,6 +327,45 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Reply'), findsNothing);
     expect(find.text('Sign in to join the conversation.'), findsOneWidget);
+  });
+
+  testWidgets('post detail is localized in Indonesian', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_FakeRepository(), locale: const Locale('id')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Postingan'), findsOneWidget);
+    expect(find.text('Komentar (2)'), findsOneWidget);
+    expect(find.text('Balas'), findsOneWidget);
+    expect(find.text('Hapus'), findsOneWidget);
+    expect(find.textContaining('Kamu', findRichText: true), findsOneWidget);
+    // User-generated content stays untranslated.
+    expect(find.text('Great tips!'), findsOneWidget);
+  });
+
+  testWidgets('community list is localized in Indonesian', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneView(tester);
+    await tester.pumpWidget(
+      _app(
+        _FakeRepository(),
+        initialLocation: AppRoutes.community,
+        locale: const Locale('id'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Komunitas'), findsOneWidget);
+    expect(find.text('di Berbagi Game'), findsOneWidget);
+    expect(find.text('Suka'), findsNWidgets(2));
+    expect(find.text('Terbaru'), findsOneWidget);
+    expect(find.text('Paling Disukai'), findsOneWidget);
+    expect(find.byTooltip('Cari postingan'), findsOneWidget);
+    expect(find.text('This game is amazing!'), findsOneWidget);
   });
 
   group('community list', () {

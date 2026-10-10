@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/errors/error_messages.dart';
+import '../../core/l10n/locale_resolution.dart';
 
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key});
@@ -109,8 +110,8 @@ class ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return MessageView(
       icon: Icons.wifi_off_rounded,
-      message: friendlyErrorMessage(error),
-      actionLabel: onRetry == null ? null : 'Try again',
+      message: friendlyErrorMessage(context.l10n, error),
+      actionLabel: onRetry == null ? null : context.l10n.commonRetry,
       onAction: onRetry,
     );
   }
@@ -134,9 +135,9 @@ class SignInRequiredView extends StatelessWidget {
       icon: icon,
       title: title,
       message: message,
-      actionLabel: 'Sign In',
+      actionLabel: context.l10n.commonSignIn,
       onAction: () => context.push(AppRoutes.login),
-      secondaryLabel: 'Create an account',
+      secondaryLabel: context.l10n.commonCreateAccount,
       onSecondary: () => context.push(AppRoutes.register),
     );
   }

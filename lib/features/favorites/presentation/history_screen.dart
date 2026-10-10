@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../shared/widgets/game_list_tile.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../data/library_repository.dart';
@@ -15,25 +16,26 @@ class HistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(playHistoryProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Play History')),
+      appBar: AppBar(title: Text(l10n.profilePlayHistory)),
       body: history.when(
         skipLoadingOnRefresh: true,
         data: (List<HistoryEntry>? entries) {
           if (entries == null) {
-            return const SignInRequiredView(
+            return SignInRequiredView(
               icon: Icons.history_rounded,
-              title: 'Your play history',
-              message: 'Sign in to pick up right where you left off.',
+              title: l10n.historySignInTitle,
+              message: l10n.historySignInMessage,
             );
           }
           if (entries.isEmpty) {
             return MessageView(
               icon: Icons.history_toggle_off_rounded,
-              title: 'Nothing played yet',
-              message: 'Games you play will show up here.',
-              actionLabel: 'Find a Game',
+              title: l10n.historyEmptyTitle,
+              message: l10n.historyEmptyMessage,
+              actionLabel: l10n.commonFindGame,
               onAction: () => context.go(AppRoutes.discover),
             );
           }
@@ -49,7 +51,7 @@ class HistoryScreen extends ConsumerWidget {
                 final entry = entries[index];
                 return GameListTile(
                   game: entry.game,
-                  subtitle: _subtitle(entry),
+                  subtitle: _subtitle(l10n, entry),
                 );
               },
             ),
@@ -64,10 +66,10 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  static String _subtitle(HistoryEntry entry) {
-    final details = ContinuePlayingCard.details(entry);
+  static String _subtitle(AppLocalizations l10n, HistoryEntry entry) {
+    final details = ContinuePlayingCard.details(l10n, entry);
     final plays = entry.playCount;
     if (plays <= 1) return details;
-    return '$details · $plays plays';
+    return '$details · ${l10n.historyPlayCount(plays)}';
   }
 }

@@ -8,6 +8,8 @@ import 'package:gamediscoveries_mobile/features/reviews/data/my_reviews_reposito
 import 'package:gamediscoveries_mobile/features/reviews/domain/my_review.dart';
 import 'package:gamediscoveries_mobile/features/reviews/presentation/my_reviews_screen.dart';
 
+import '../../helpers/localized_app.dart';
+
 class _SignedIn extends AuthSessionController {
   @override
   Future<AuthSessionState> build() async =>
@@ -44,7 +46,7 @@ Widget _app(_FakeRepo repo) {
       authSessionControllerProvider.overrideWith(_SignedIn.new),
       myReviewsRepositoryProvider.overrideWithValue(repo),
     ],
-    child: const MaterialApp(home: MyReviewsScreen()),
+    child: localizedApp(home: const MyReviewsScreen()),
   );
 }
 

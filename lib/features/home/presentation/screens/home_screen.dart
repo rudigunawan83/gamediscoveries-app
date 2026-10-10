@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/utils/formatters.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/widgets/app_search_field.dart';
 import '../../../../shared/widgets/gd_avatar.dart';
 import '../../../../shared/widgets/xp_progress_bar.dart';
@@ -69,13 +69,16 @@ class _HomeHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final user = ref.watch(authSessionControllerProvider).value?.user;
     final progress = ref.watch(myProgressProvider).value;
     final unread = ref.watch(unreadNotificationsProvider);
 
     final name = progress?.userName.isNotEmpty == true
         ? progress!.userName
-        : (user?.displayName.isNotEmpty == true ? user!.displayName : 'Player');
+        : (user?.displayName.isNotEmpty == true
+              ? user!.displayName
+              : l10n.profileDefaultName);
     final firstName = name.split(' ').first;
     final level = progress?.level;
 
@@ -98,7 +101,7 @@ class _HomeHeader extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Hi, $firstName 👋',
+                  l10n.homeGreeting(firstName),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.titleMedium?.copyWith(
@@ -110,7 +113,7 @@ class _HomeHeader extends ConsumerWidget {
                   GestureDetector(
                     onTap: () => context.push(AppRoutes.login),
                     child: Text(
-                      'Sign in to earn XP & level up',
+                      l10n.homeSignInPrompt,
                       style: textTheme.bodySmall?.copyWith(
                         color: AppColors.gold,
                         fontWeight: FontWeight.w600,
@@ -123,7 +126,7 @@ class _HomeHeader extends ConsumerWidget {
                     child: Row(
                       children: <Widget>[
                         Text(
-                          'Level ${level.level}',
+                          l10n.progressLevel(level.level),
                           style: textTheme.labelMedium?.copyWith(
                             color: AppColors.gold,
                             fontWeight: FontWeight.w800,
@@ -134,15 +137,17 @@ class _HomeHeader extends ConsumerWidget {
                           child: XpProgressBar(
                             value: level.progress,
                             height: 6,
-                            semanticLabel: 'Level progress',
+                            semanticLabel: l10n.homeLevelProgressSemantics,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           level.isMaxLevel
-                              ? 'MAX'
-                              : '${formatGrouped(level.currentLevelXp)} / '
-                                    '${formatGrouped(level.nextLevelXp)} XP',
+                              ? l10n.commonMaxShort
+                              : l10n.commonXpProgress(
+                                  level.currentLevelXp,
+                                  level.nextLevelXp,
+                                ),
                           style: textTheme.labelSmall?.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -155,7 +160,7 @@ class _HomeHeader extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
           IconButton(
-            tooltip: 'Notifications',
+            tooltip: l10n.commonNotifications,
             onPressed: () => context.push(AppRoutes.notifications),
             icon: Badge(
               isLabelVisible: unread > 0,
@@ -181,8 +186,7 @@ class _AdventureBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Semantics(
         button: true,
-        label:
-            'New Adventures Every Day. Explore the latest and trending games!',
+        label: context.l10n.homeBannerSemantics,
         excludeSemantics: true,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),

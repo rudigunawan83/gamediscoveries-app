@@ -12,6 +12,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../../app/config/app_config.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../../auth/presentation/providers/auth_session_controller.dart';
@@ -100,6 +101,8 @@ class _PlayerView extends ConsumerStatefulWidget {
   ConsumerState<_PlayerView> createState() => _PlayerViewState();
 }
 
+enum _LoadError { failed, unsupported }
+
 class _PlayerViewState extends ConsumerState<_PlayerView>
     with WidgetsBindingObserver {
   late final WebViewController _web;
@@ -117,7 +120,7 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
   bool _loadStarted = false;
   bool _orientationTimedOut = false;
   Timer? _orientationTimeout;
-  String? _loadError;
+  _LoadError? _loadError;
 
   @override
   void initState() {
@@ -175,7 +178,7 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
             if (error.isForMainFrame != true || !mounted) return;
             setState(() {
               _loading = false;
-              _loadError = 'The game could not be loaded.';
+              _loadError = _LoadError.failed;
             });
           },
           // The main frame is our host page; anything trying to replace it
@@ -196,7 +199,7 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
     final url = Uri.tryParse(widget.game.playUrl ?? '');
     if (url == null || !url.hasScheme) {
       _loading = false;
-      _loadError = 'This game is not available on mobile yet.';
+      _loadError = _LoadError.unsupported;
     }
     return controller;
   }
@@ -354,7 +357,8 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
     );
   }
 
-  Widget _body(Size size, String? error) {
+  Widget _body(Size size, _LoadError? error) {
+    final l10n = context.l10n;
     if (!_loadStarted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startLoadIfReady(size);
@@ -375,9 +379,12 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
               color: AppColors.night,
               child: MessageView(
                 icon: Icons.videogame_asset_off_rounded,
-                title: 'Game unavailable',
-                message: error,
-                actionLabel: 'Back',
+                title: l10n.playerUnavailableTitle,
+                message: switch (error) {
+                  _LoadError.failed => l10n.playerLoadFailed,
+                  _LoadError.unsupported => l10n.playerUnsupported,
+                },
+                actionLabel: l10n.commonBack,
                 onAction: _exit,
               ),
             ),
@@ -400,7 +407,7 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
                 padding: const EdgeInsets.all(8),
                 child: _RoundButton(
                   icon: Icons.pause_rounded,
-                  tooltip: 'Pause',
+                  tooltip: l10n.playerPause,
                   onPressed: () => _setPaused(true),
                 ),
               ),
@@ -452,6 +459,7 @@ class _PauseOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return ColoredBox(
       color: Colors.black.withValues(alpha: 0.82),
@@ -471,7 +479,7 @@ class _PauseOverlay extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Paused',
+                  l10n.playerPaused,
                   textAlign: TextAlign.center,
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
@@ -491,19 +499,19 @@ class _PauseOverlay extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: onResume,
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Resume'),
+                  label: Text(l10n.playerResume),
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
                   onPressed: onRestart,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Restart'),
+                  label: Text(l10n.playerRestart),
                 ),
                 const SizedBox(height: 10),
                 TextButton.icon(
                   onPressed: onExit,
                   icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Exit Game'),
+                  label: Text(l10n.playerExit),
                 ),
               ],
             ),

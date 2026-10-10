@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/models/game_summary.dart';
 import '../../../../shared/widgets/game_shelf.dart';
 import '../../../../shared/widgets/state_views.dart';
@@ -26,9 +27,9 @@ class HomeDiscoverySections extends ConsumerWidget {
       skipLoadingOnRefresh: true,
       data: (HomeDiscoveries data) {
         if (data.isEmpty) {
-          return const MessageView(
+          return MessageView(
             icon: Icons.videogame_asset_off_rounded,
-            message: 'No games to show yet. Check back soon.',
+            message: context.l10n.homeEmpty,
           );
         }
 
@@ -51,19 +52,32 @@ class _HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     void seeAll() => context.go(AppRoutes.discover);
+    final l10n = context.l10n;
 
     final shelves = <Widget>[
       _RecommendedShelf(fallback: data.trending),
       FeaturedCarousel(games: data.featured),
-      GameShelf(title: 'Trending Now', games: data.trending, onSeeAll: seeAll),
+      GameShelf(
+        title: l10n.homeShelfTrending,
+        games: data.trending,
+        onSeeAll: seeAll,
+      ),
       const _MobileReadyShelf(),
-      GameShelf(title: 'Popular', games: data.popular, onSeeAll: seeAll),
-      GameShelf(title: 'New Releases', games: data.latest, onSeeAll: seeAll),
-      GameShelf(title: 'Hot Games', games: data.hotGames),
-      GameShelf(title: 'Most Played', games: data.mostPlayed),
-      GameShelf(title: 'Best Games', games: data.bestGames),
-      GameShelf(title: 'Multiplayer', games: data.multiplayer),
-      GameShelf(title: 'Exclusive', games: data.exclusiveGames),
+      GameShelf(
+        title: l10n.homeShelfPopular,
+        games: data.popular,
+        onSeeAll: seeAll,
+      ),
+      GameShelf(
+        title: l10n.homeShelfNewReleases,
+        games: data.latest,
+        onSeeAll: seeAll,
+      ),
+      GameShelf(title: l10n.homeShelfHot, games: data.hotGames),
+      GameShelf(title: l10n.homeShelfMostPlayed, games: data.mostPlayed),
+      GameShelf(title: l10n.homeShelfBest, games: data.bestGames),
+      GameShelf(title: l10n.homeShelfMultiplayer, games: data.multiplayer),
+      GameShelf(title: l10n.homeShelfExclusive, games: data.exclusiveGames),
     ];
 
     return Column(
@@ -90,7 +104,7 @@ class _RecommendedShelf extends ConsumerWidget {
     final games = ref.watch(forYouProvider).value;
 
     return GameShelf(
-      title: 'Recommended For You',
+      title: context.l10n.homeShelfRecommended,
       games: games == null || games.isEmpty ? fallback : games,
       onSeeAll: () => context.go(AppRoutes.discover),
     );
@@ -107,7 +121,7 @@ class _MobileReadyShelf extends ConsumerWidget {
     return games.when(
       skipLoadingOnRefresh: true,
       data: (result) => GameShelf(
-        title: 'Made for Mobile',
+        title: context.l10n.homeShelfMobile,
         games: result.items,
         onSeeAll: () => context.go(AppRoutes.discover),
       ),

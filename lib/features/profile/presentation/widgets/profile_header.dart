@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 
 class ProfileHeader extends StatelessWidget {
   const ProfileHeader({required this.title, this.onSettings, super.key});
@@ -30,7 +31,7 @@ class ProfileHeader extends StatelessWidget {
         ),
         if (settings != null)
           IconButton(
-            tooltip: 'Account Settings',
+            tooltip: context.l10n.settingsTitle,
             onPressed: settings,
             style: IconButton.styleFrom(
               fixedSize: const Size.square(48),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/hex_badge.dart';
 import '../../../shared/widgets/pill_tabs.dart';
@@ -23,20 +24,21 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
   @override
   Widget build(BuildContext context) {
     final achievements = ref.watch(myAchievementsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Achievements')),
+      appBar: AppBar(title: Text(l10n.profileAchievements)),
       body: achievements.when(
         skipLoadingOnRefresh: true,
         data: (AchievementList? data) {
           if (data == null) {
-            return const SignInRequiredView(
+            return SignInRequiredView(
               icon: Icons.emoji_events_rounded,
-              title: 'Unlock achievements',
-              message: 'Sign in to collect badges as you play and explore.',
+              title: l10n.achievementsSignInTitle,
+              message: l10n.achievementsSignInMessage,
             );
           }
-          return _content(data);
+          return _content(l10n, data);
         },
         loading: () => const LoadingView(),
         error: (Object error, StackTrace stackTrace) => ErrorView(
@@ -47,7 +49,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     );
   }
 
-  Widget _content(AchievementList data) {
+  Widget _content(AppLocalizations l10n, AchievementList data) {
     final categories = data.categories;
     final tab = _tab > categories.length ? 0 : _tab;
     final items = tab == 0
@@ -66,7 +68,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
           SliverToBoxAdapter(
             child: PillTabs(
               expanded: false,
-              labels: <String>['All', ...categories.map(humanizeCode)],
+              labels: <String>[l10n.commonAll, ...categories.map(humanizeCode)],
               selectedIndex: tab,
               onChanged: (int i) => setState(() => _tab = i),
             ),
@@ -84,7 +86,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           text: '${data.userUnlocked}',
                           style: const TextStyle(color: AppColors.gold),
                         ),
-                        TextSpan(text: ' / $total Unlocked'),
+                        TextSpan(text: l10n.achievementsUnlockedOf(total)),
                       ],
                     ),
                     style: textTheme.titleMedium?.copyWith(
@@ -94,18 +96,18 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                   const SizedBox(height: 10),
                   XpProgressBar(
                     value: total == 0 ? 0 : data.userUnlocked / total,
-                    semanticLabel: 'Achievements unlocked',
+                    semanticLabel: l10n.achievementsUnlockedSemantics,
                   ),
                 ],
               ),
             ),
           ),
           if (items.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
               child: MessageView(
                 icon: Icons.emoji_events_outlined,
-                message: 'No achievements in this category yet.',
+                message: l10n.achievementsEmptyCategory,
               ),
             )
           else
@@ -141,7 +143,7 @@ class _AchievementTile extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: hidden ? 'Secret achievement' : a.title,
+      label: hidden ? context.l10n.achievementsSecretSemantics : a.title,
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -190,6 +192,7 @@ class _AchievementTile extends StatelessWidget {
       showDragHandle: true,
       builder: (BuildContext context) {
         final textTheme = Theme.of(context).textTheme;
+        final l10n = context.l10n;
 
         return SafeArea(
           child: Padding(
@@ -205,7 +208,7 @@ class _AchievementTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  hidden ? 'Secret Achievement' : a.title,
+                  hidden ? l10n.achievementsSecretTitle : a.title,
                   textAlign: TextAlign.center,
                   style: textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
@@ -213,7 +216,7 @@ class _AchievementTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  hidden ? 'Keep playing to discover this one.' : a.description,
+                  hidden ? l10n.achievementsSecretHint : a.description,
                   textAlign: TextAlign.center,
                   style: textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
@@ -222,16 +225,21 @@ class _AchievementTile extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   a.isUnlocked
-                      ? 'Unlocked ${formatTimeAgo(a.unlockedAt)}'
+                      ? l10n.achievementsUnlockedAt(
+                          formatTimeAgo(l10n, a.unlockedAt),
+                        )
                       : hidden
-                      ? 'Locked'
-                      : 'Progress ${a.progressValue}/${a.targetValue}',
+                      ? l10n.achievementsLocked
+                      : l10n.achievementsProgress(
+                          a.progressValue,
+                          a.targetValue,
+                        ),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 if (a.rewardXp > 0) ...<Widget>[
                   const SizedBox(height: 4),
                   Text(
-                    '+${formatGrouped(a.rewardXp)} XP',
+                    l10n.commonXpReward(a.rewardXp),
                     style: const TextStyle(
                       color: AppColors.gold,
                       fontWeight: FontWeight.w900,

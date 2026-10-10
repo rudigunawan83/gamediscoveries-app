@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gamediscoveries_mobile/core/l10n/locale_resolution.dart';
 import 'package:gamediscoveries_mobile/features/ad_rewards/data/ad_reward_repository.dart';
 import 'package:gamediscoveries_mobile/features/ad_rewards/data/rewarded_ad_player.dart';
 import 'package:gamediscoveries_mobile/features/ad_rewards/presentation/ad_reward_providers.dart';
 import 'package:gamediscoveries_mobile/features/ad_rewards/presentation/watch_ad_reward_card.dart';
+
+import '../../helpers/localized_app.dart';
 
 class _FakePlayer implements RewardedAdPlayer {
   _FakePlayer({this.earned = true, this.platform = 'ANDROID'});
@@ -56,6 +59,22 @@ class _FakeRepository implements AdRewardRepository {
       states[(polls++).clamp(0, states.length - 1)];
 }
 
+class _ThrowingPlayer implements RewardedAdPlayer {
+  _ThrowingPlayer(this.failure);
+
+  final RewardedAdFailure failure;
+
+  @override
+  String? get platform => 'ANDROID';
+
+  @override
+  Future<bool> show({required String userId, required String customData}) =>
+      throw RewardedAdUnavailable(failure);
+}
+
+final _en = lookupAppLocalizations(const Locale('en'));
+final _id = lookupAppLocalizations(const Locale('id'));
+
 const _pending = AdRewardTicketState(status: 'PENDING', xpAwarded: 0);
 const _rewarded = AdRewardTicketState(status: 'REWARDED', xpAwarded: 50);
 
@@ -70,8 +89,10 @@ void main() {
     final outcome = await _flow(repo, player).watch();
 
     expect(player.shown.single, ('user-1', 'secret-token'));
+    expect(outcome.result, AdRewardResult.granted);
     expect(outcome.xp, 50);
-    expect(outcome.message, '+50 XP added!');
+    expect(adRewardMessage(_en, outcome), '+50 XP added!');
+    expect(adRewardMessage(_id, outcome), '+50 XP ditambahkan!');
   });
 
   test('skipping the video grants nothing and does not poll', () async {
@@ -81,7 +102,8 @@ void main() {
 
     expect(outcome.xp, 0);
     expect(repo.polls, 0);
-    expect(outcome.message, contains('full video'));
+    expect(outcome.result, AdRewardResult.notCompleted);
+    expect(adRewardMessage(_en, outcome), contains('full video'));
   });
 
   test('unverified view stays pending without claiming XP', () async {
@@ -91,7 +113,11 @@ void main() {
 
     expect(outcome.xp, 0);
     expect(repo.polls, 3);
-    expect(outcome.message, contains('once the view is verified'));
+    expect(outcome.result, AdRewardResult.pending);
+    expect(
+      adRewardMessage(_en, outcome),
+      contains('+50 XP will appear once the view is verified'),
+    );
   });
 
   test('server rejection is explained', () async {
@@ -106,7 +132,24 @@ void main() {
     final outcome = await _flow(repo, _FakePlayer()).watch();
 
     expect(outcome.xp, 0);
-    expect(outcome.message, contains('all rewarded videos'));
+    expect(outcome.result, AdRewardResult.dailyLimit);
+    expect(adRewardMessage(_en, outcome), contains('all rewarded videos'));
+    expect(adRewardMessage(_id, outcome), contains('sudah habis'));
+  });
+
+  test('ad player failures map to localized reasons', () async {
+    final repo = _FakeRepository(<AdRewardTicketState>[_rewarded]);
+    final flow = AdRewardFlow(
+      repo,
+      _ThrowingPlayer(RewardedAdFailure.noVideo),
+      pollInterval: Duration.zero,
+      pollAttempts: 1,
+    );
+
+    final outcome = await flow.watch();
+
+    expect(outcome.result, AdRewardResult.noVideo);
+    expect(adRewardMessage(_id, outcome), 'Belum ada video saat ini.');
   });
 
   test('unsupported device does not request a ticket', () async {
@@ -116,6 +159,7 @@ void main() {
 
     expect(repo.tickets, 0);
     expect(outcome.xp, 0);
+    expect(outcome.result, AdRewardResult.unavailable);
   });
 
   testWidgets('card shows XP per video and remaining views', (
@@ -134,7 +178,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: WatchAdRewardCard())),
+        child: localizedApp(home: const Scaffold(body: WatchAdRewardCard())),
       ),
     );
     await tester.pumpAndSettle();
@@ -142,6 +186,35 @@ void main() {
     expect(find.text('Watch & Earn'), findsOneWidget);
     expect(find.textContaining('+50 XP · 3/5 left today'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '+50 XP'), findsOneWidget);
+  });
+
+  testWidgets('card is translated to Indonesian', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          adRewardStatusProvider.overrideWith(
+            (Ref ref) async => const AdRewardStatus(
+              enabled: true,
+              xpPerAd: 50,
+              dailyLimit: 5,
+              watchedToday: 5,
+              remainingToday: 0,
+            ),
+          ),
+        ],
+        child: localizedApp(
+          home: const Scaffold(body: WatchAdRewardCard()),
+          locale: const Locale('id'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tonton & Raih XP'), findsOneWidget);
+    expect(
+      find.text('Semua 5 video sudah ditonton. Kembali lagi besok!'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('card is hidden when rewarded ads are off', (
@@ -152,7 +225,7 @@ void main() {
         overrides: [
           adRewardStatusProvider.overrideWith((Ref ref) async => null),
         ],
-        child: const MaterialApp(home: Scaffold(body: WatchAdRewardCard())),
+        child: localizedApp(home: const Scaffold(body: WatchAdRewardCard())),
       ),
     );
     await tester.pumpAndSettle();

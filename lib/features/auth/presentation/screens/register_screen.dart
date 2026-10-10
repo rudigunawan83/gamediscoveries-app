@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/error_messages.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../core/network/api_exception.dart';
 import '../providers/auth_session_controller.dart';
 import '../widgets/auth_form_scaffold.dart';
@@ -22,7 +23,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController _password = TextEditingController();
   bool _submitting = false;
   bool _obscure = true;
-  String? _error;
+  Object? _error;
 
   @override
   void dispose() {
@@ -52,23 +53,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       context.canPop() ? context.pop() : context.go(AppRoutes.home);
     } catch (error) {
       if (!mounted) return;
-      setState(() {
-        _error = error is ApiException && error.statusCode == 409
-            ? 'An account with this email already exists.'
-            : error is ApiException && error.statusCode == 400
-            ? error.message
-            : friendlyErrorMessage(error);
-      });
+      setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
+  String? _errorText(AppLocalizations l10n) {
+    final error = _error;
+    if (error == null) return null;
+    return error is ApiException && error.statusCode == 409
+        ? l10n.authEmailTaken
+        : error is ApiException && error.statusCode == 400
+        ? error.message
+        : friendlyErrorMessage(l10n, error);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return AuthFormScaffold(
-      title: 'Create your account',
-      subtitle: 'Earn XP, unlock achievements and compete with players.',
+      title: l10n.authRegisterTitle,
+      subtitle: l10n.authRegisterSubtitle,
       children: <Widget>[
         Form(
           key: _formKey,
@@ -79,12 +86,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _name,
                   textInputAction: TextInputAction.next,
                   autofillHints: const <String>[AutofillHints.nickname],
-                  decoration: const InputDecoration(
-                    hintText: 'Display name',
-                    prefixIcon: Icon(Icons.person_outline_rounded),
+                  decoration: InputDecoration(
+                    hintText: l10n.authDisplayNameHint,
+                    prefixIcon: const Icon(Icons.person_outline_rounded),
                   ),
-                  validator: (String? v) => (v ?? '').trim().length < 2
-                      ? 'Use at least 2 characters.'
+                  validator: (String? v) =>
+                      (v ?? '').trim().length < minDisplayNameLength
+                      ? l10n.authMinCharacters(minDisplayNameLength)
                       : null,
                 ),
                 const SizedBox(height: 12),
@@ -93,11 +101,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const <String>[AutofillHints.email],
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Email',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
+                  decoration: InputDecoration(
+                    hintText: l10n.authEmailHint,
+                    prefixIcon: const Icon(Icons.mail_outline_rounded),
                   ),
-                  validator: validateEmail,
+                  validator: (String? v) => validateEmail(l10n, v),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -107,10 +115,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: l10n.authPasswordHint,
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
-                      tooltip: _obscure ? 'Show password' : 'Hide password',
+                      tooltip: _obscure
+                          ? l10n.authShowPassword
+                          : l10n.authHidePassword,
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure
@@ -119,14 +129,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                   ),
-                  validator: validatePassword,
+                  validator: (String? v) => validatePassword(l10n, v),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 20),
-        AuthErrorText(_error),
+        AuthErrorText(_errorText(l10n)),
         ElevatedButton(
           onPressed: _submitting ? null : _submit,
           child: _submitting
@@ -134,12 +144,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   dimension: 22,
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
-              : const Text('Create Account'),
+              : Text(l10n.authCreateAccount),
         ),
         const SizedBox(height: 12),
         TextButton(
           onPressed: () => context.pushReplacement(AppRoutes.login),
-          child: const Text('Already have an account? Sign in'),
+          child: Text(l10n.authHaveAccount),
         ),
       ],
     );

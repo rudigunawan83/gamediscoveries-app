@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../shared/models/game_summary.dart';
 import '../../../shared/widgets/game_list_tile.dart';
 import '../../../shared/widgets/state_views.dart';
@@ -15,25 +16,26 @@ class FavoritesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favorites = ref.watch(favoriteGamesProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Favorites')),
+      appBar: AppBar(title: Text(l10n.profileMyFavorites)),
       body: favorites.when(
         skipLoadingOnRefresh: true,
         data: (List<GameSummary>? games) {
           if (games == null) {
-            return const SignInRequiredView(
+            return SignInRequiredView(
               icon: Icons.favorite_rounded,
-              title: 'Save your favorites',
-              message: 'Sign in to keep a list of games you love.',
+              title: l10n.favoritesSignInTitle,
+              message: l10n.favoritesSignInMessage,
             );
           }
           if (games.isEmpty) {
             return MessageView(
               icon: Icons.favorite_border_rounded,
-              title: 'No favorites yet',
-              message: 'Tap the heart on any game to save it here.',
-              actionLabel: 'Discover Games',
+              title: l10n.favoritesEmptyTitle,
+              message: l10n.favoritesEmptyMessage,
+              actionLabel: l10n.favoritesDiscoverGames,
               onAction: () => context.go(AppRoutes.discover),
             );
           }

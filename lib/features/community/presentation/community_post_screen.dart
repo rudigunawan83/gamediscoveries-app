@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/gd_avatar.dart';
 import '../../../shared/widgets/state_views.dart';
@@ -48,13 +49,14 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
 
   Future<void> _toggleLike(CommunityPost post, bool signedIn) async {
     if (!signedIn) {
-      showCommunitySignInPrompt(context, 'Sign in to like posts.');
+      showCommunitySignInPrompt(context, context.l10n.communitySignInToLike);
       return;
     }
     if (_liking) return;
 
     final liked = post.likedByViewer;
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     setState(() {
       _liking = true;
       _localPost = post.withReaction(liked ? null : 'like');
@@ -70,7 +72,7 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
     } catch (error) {
       if (mounted) setState(() => _localPost = post);
       messenger.showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+        SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
       );
     } finally {
       if (mounted) setState(() => _liking = false);
@@ -87,6 +89,7 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
     if (content.isEmpty || _sending) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     setState(() => _sending = true);
     try {
       await ref
@@ -103,7 +106,7 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
       _refreshLists();
     } catch (error) {
       messenger.showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+        SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -111,22 +114,23 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
   }
 
   Future<void> _delete(CommunityComment comment) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete comment?'),
-        content: const Text('Your comment will be removed.'),
+        title: Text(l10n.communityDeleteCommentTitle),
+        content: Text(l10n.communityDeleteCommentMessage),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.danger),
+            child: Text(
+              l10n.commonDelete,
+              style: const TextStyle(color: AppColors.danger),
             ),
           ),
         ],
@@ -140,10 +144,12 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
       if (_replyTo?.id == comment.id) setState(() => _replyTo = null);
       ref.invalidate(communityCommentsProvider(widget.postId));
       _refreshLists();
-      messenger.showSnackBar(const SnackBar(content: Text('Comment deleted.')));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.communityCommentDeleted)),
+      );
     } catch (error) {
       messenger.showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+        SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
       );
     }
   }
@@ -161,14 +167,17 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
             posts.any((CommunityPost p) => p.postId == widget.postId),
       ),
     );
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Post'),
+        title: Text(l10n.communityPostTitle),
         actions: <Widget>[
           if (loaded != null) ...<Widget>[
             IconButton(
-              tooltip: saved ? 'Remove from saved' : 'Save post',
+              tooltip: saved
+                  ? l10n.communityRemoveFromSaved
+                  : l10n.communitySavePost,
               color: saved ? AppColors.gold : null,
               onPressed: () => toggleSavedCommunityPost(context, ref, loaded),
               icon: Icon(
@@ -176,8 +185,8 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
               ),
             ),
             IconButton(
-              tooltip: 'Share post',
-              onPressed: () => shareCommunityPost(loaded),
+              tooltip: l10n.communitySharePost,
+              onPressed: () => shareCommunityPost(l10n, loaded),
               icon: const Icon(Icons.ios_share_rounded),
             ),
           ],
@@ -225,7 +234,7 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
                       const Divider(color: AppColors.line, height: 1),
                       const SizedBox(height: 16),
                       Text(
-                        'Comments ($commentCount)',
+                        l10n.communityComments(commentCount),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
@@ -248,13 +257,15 @@ class _CommunityPostScreenState extends ConsumerState<CommunityPostScreen> {
                               ),
                             ],
                         data: (List<CommunityComment> items) => items.isEmpty
-                            ? const <Widget>[
+                            ? <Widget>[
                                 Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 24),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 24,
+                                  ),
                                   child: Text(
-                                    'No comments yet. Start the conversation!',
+                                    l10n.communityNoComments,
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
@@ -307,6 +318,7 @@ class _PostBody extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final game = post.game;
     final liked = post.likedByViewer;
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +359,7 @@ class _PostBody extends StatelessWidget {
             Semantics(
               button: true,
               toggled: liked,
-              label: liked ? 'Unlike post' : 'Like post',
+              label: liked ? l10n.communityUnlikePost : l10n.communityLikePost,
               excludeSemantics: true,
               child: Material(
                 color: liked
@@ -377,7 +389,7 @@ class _PostBody extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            formatCompact(post.reactionCount),
+                            formatCompact(l10n, post.reactionCount),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ],
@@ -394,7 +406,7 @@ class _PostBody extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
             const SizedBox(width: 4),
-            Text(formatCompact(commentCount)),
+            Text(formatCompact(l10n, commentCount)),
             if (post.viewCount > 0) ...<Widget>[
               const SizedBox(width: 16),
               const Icon(
@@ -403,7 +415,7 @@ class _PostBody extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
               const SizedBox(width: 4),
-              Text(formatCompact(post.viewCount)),
+              Text(formatCompact(l10n, post.viewCount)),
             ],
           ],
         ),
@@ -484,6 +496,7 @@ class _CommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reply = onReply;
+    final l10n = context.l10n;
     const actionStyle = ButtonStyle(
       visualDensity: VisualDensity.compact,
       padding: WidgetStatePropertyAll<EdgeInsets>(
@@ -514,11 +527,11 @@ class _CommentTile extends StatelessWidget {
                   TextSpan(
                     children: <InlineSpan>[
                       TextSpan(
-                        text: isMine ? 'You' : comment.author.name,
+                        text: isMine ? l10n.commonYou : comment.author.name,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       TextSpan(
-                        text: '  ${formatTimeAgo(comment.createdAt)}',
+                        text: '  ${formatTimeAgo(l10n, comment.createdAt)}',
                         style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12,
@@ -540,15 +553,15 @@ class _CommentTile extends StatelessWidget {
                       TextButton(
                         style: actionStyle,
                         onPressed: () => reply(comment),
-                        child: const Text('Reply'),
+                        child: Text(l10n.communityReply),
                       ),
                     if (isMine)
                       TextButton(
                         style: actionStyle,
                         onPressed: () => onDelete(comment),
-                        child: const Text(
-                          'Delete',
-                          style: TextStyle(color: AppColors.danger),
+                        child: Text(
+                          l10n.commonDelete,
+                          style: const TextStyle(color: AppColors.danger),
                         ),
                       ),
                   ],
@@ -575,11 +588,11 @@ class _InlineError extends StatelessWidget {
       child: Column(
         children: <Widget>[
           Text(
-            friendlyErrorMessage(error),
+            friendlyErrorMessage(context.l10n, error),
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Try again')),
+          TextButton(onPressed: onRetry, child: Text(context.l10n.commonRetry)),
         ],
       ),
     );
@@ -608,6 +621,7 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reply = replyTo;
+    final l10n = context.l10n;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -621,15 +635,15 @@ class _Composer extends StatelessWidget {
           child: !signedIn
               ? Row(
                   children: <Widget>[
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Sign in to join the conversation.',
-                        style: TextStyle(color: AppColors.textSecondary),
+                        l10n.communitySignInToComment,
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
                     TextButton(
                       onPressed: () => context.push(AppRoutes.login),
-                      child: const Text('Sign In'),
+                      child: Text(l10n.commonSignIn),
                     ),
                   ],
                 )
@@ -647,7 +661,7 @@ class _Composer extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Replying to ${reply.author.name}',
+                              l10n.communityReplyingTo(reply.author.name),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -657,7 +671,7 @@ class _Composer extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Cancel reply',
+                            tooltip: l10n.communityCancelReply,
                             visualDensity: VisualDensity.compact,
                             onPressed: onCancelReply,
                             icon: const Icon(Icons.close_rounded, size: 18),
@@ -678,8 +692,8 @@ class _Composer extends StatelessWidget {
                             textCapitalization: TextCapitalization.sentences,
                             decoration: InputDecoration(
                               hintText: reply == null
-                                  ? 'Write a comment...'
-                                  : 'Write a reply...',
+                                  ? l10n.communityWriteComment
+                                  : l10n.communityWriteReply,
                               counterText: '',
                               isDense: true,
                             ),
@@ -690,7 +704,7 @@ class _Composer extends StatelessWidget {
                           listenable: controller,
                           builder: (BuildContext context, Widget? child) =>
                               IconButton(
-                                tooltip: 'Send comment',
+                                tooltip: l10n.communitySendComment,
                                 color: AppColors.gold,
                                 onPressed:
                                     sending || controller.text.trim().isEmpty

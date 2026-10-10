@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../../achievements/domain/achievement_models.dart';
 import '../../achievements/presentation/achievements_providers.dart';
@@ -95,7 +96,7 @@ class _ProfileBody extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       ProfileHeader(
-                        title: 'Profile',
+                        title: context.l10n.profileTitle,
                         onSettings: () =>
                             context.push(AppRoutes.accountSettings),
                       ),
@@ -131,6 +132,7 @@ class _SignedInProfile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final user = ref.watch(authSessionControllerProvider).value?.user;
     final progressAsync = ref.watch(myProgressProvider);
     final progress = progressAsync.value;
@@ -138,7 +140,9 @@ class _SignedInProfile extends ConsumerWidget {
 
     final name = progress?.userName.isNotEmpty == true
         ? progress!.userName
-        : (user?.displayName.isNotEmpty == true ? user!.displayName : 'Player');
+        : (user?.displayName.isNotEmpty == true
+              ? user!.displayName
+              : l10n.profileDefaultName);
     final progressError = progress == null ? progressAsync.error : null;
     // /users/me is the source of truth; progress can lag behind an upload.
     final avatarUrl = user?.avatarUrl;
@@ -171,35 +175,35 @@ class _SignedInProfile extends ConsumerWidget {
         else ...<Widget>[
           ProfileXpProgress(level: progress?.level),
           const SizedBox(height: 20),
-          ProfileStatisticsCard(stats: _stats(progress, achievements)),
+          ProfileStatisticsCard(stats: _stats(l10n, progress, achievements)),
         ],
         const SizedBox(height: 24),
         const _MainMenu(),
         const SizedBox(height: 24),
-        const _MoreSection(
+        _MoreSection(
           items: <_MoreItem>[
             _MoreItem(
               Icons.trending_up_rounded,
               AppColors.teal,
-              'My Progress',
+              l10n.profileMyProgress,
               AppRoutes.progress,
             ),
             _MoreItem(
               Icons.emoji_events_rounded,
               AppColors.gold,
-              'Achievements',
+              l10n.profileAchievements,
               AppRoutes.achievements,
             ),
-            ..._communityItems,
+            ..._communityItems(l10n),
           ],
         ),
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: () => confirmAndSignOut(context, ref),
           icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
-          label: const Text(
-            'Sign Out',
-            style: TextStyle(color: AppColors.danger),
+          label: Text(
+            l10n.commonSignOut,
+            style: const TextStyle(color: AppColors.danger),
           ),
         ),
       ],
@@ -208,6 +212,7 @@ class _SignedInProfile extends ConsumerWidget {
 
   /// Every value comes from the backend; `null` renders as a dash.
   static List<ProfileStat> _stats(
+    AppLocalizations l10n,
     UserProgress? progress,
     AchievementList? achievements,
   ) {
@@ -222,8 +227,8 @@ class _SignedInProfile extends ConsumerWidget {
             Color(0xFFFFC928),
           ],
         ),
-        label: 'Games',
-        semanticsLabel: 'Game sessions played',
+        label: l10n.profileStatGames,
+        semanticsLabel: l10n.profileStatSessionsSemantics,
         value: stats?.totalGameSessions,
       ),
       ProfileStat(
@@ -231,8 +236,8 @@ class _SignedInProfile extends ConsumerWidget {
           Icons.sports_esports_rounded,
           colors: <Color>[Color(0xFFFFE27A), AppColors.goldDeep],
         ),
-        label: 'Games',
-        semanticsLabel: 'Different games played',
+        label: l10n.profileStatGames,
+        semanticsLabel: l10n.profileStatUniqueGamesSemantics,
         value: stats?.uniqueGamesPlayed,
       ),
       ProfileStat(
@@ -240,15 +245,15 @@ class _SignedInProfile extends ConsumerWidget {
           Icons.emoji_events_rounded,
           colors: <Color>[Color(0xFFFFE27A), AppColors.goldDeep],
         ),
-        label: 'Achievements',
-        semanticsLabel: 'Achievements unlocked',
+        label: l10n.profileAchievements,
+        semanticsLabel: l10n.profileStatAchievementsSemantics,
         value: achievements?.userUnlocked,
         highlight: true,
       ),
       ProfileStat(
         icon: const _PointsIcon(),
-        label: 'Points',
-        semanticsLabel: 'Total XP points',
+        label: l10n.profileStatPoints,
+        semanticsLabel: l10n.profileStatPointsSemantics,
         value: progress?.level.totalXp,
       ),
     ];
@@ -261,32 +266,33 @@ class _GuestProfile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return _ProfileBody(
-      identity: const ProfileIdentityCard(
-        name: 'Guest Player',
+      identity: ProfileIdentityCard(
+        name: l10n.profileGuestName,
         highlighted: false,
       ),
       children: <Widget>[
         Text(
-          'Create an account to save XP, streaks, favorites and achievements.',
+          l10n.profileGuestPrompt,
           textAlign: TextAlign.center,
           style: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => context.push(AppRoutes.register),
-          child: const Text('Create Account'),
+          child: Text(l10n.authCreateAccount),
         ),
         const SizedBox(height: 10),
         OutlinedButton(
           onPressed: () => context.push(AppRoutes.login),
-          child: const Text('Sign In'),
+          child: Text(l10n.commonSignIn),
         ),
         const SizedBox(height: 24),
         const _MainMenu(),
         const SizedBox(height: 24),
-        const _MoreSection(items: _communityItems),
+        _MoreSection(items: _communityItems(l10n)),
       ],
     );
   }
@@ -297,37 +303,39 @@ class _MainMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 10,
       children: <Widget>[
         ProfileMenuItem(
           icon: Icons.favorite_rounded,
-          label: 'My Favorites',
+          label: l10n.profileMyFavorites,
           accent: AppColors.gold,
           onTap: () => context.push(AppRoutes.favorites),
         ),
         ProfileMenuItem(
           icon: Icons.history_rounded,
-          label: 'Play History',
+          label: l10n.profilePlayHistory,
           accent: AppColors.purple,
           onTap: () => context.push(AppRoutes.history),
         ),
         ProfileMenuItem(
           icon: Icons.chat_outlined,
-          label: 'My Reviews',
+          label: l10n.profileMyReviews,
           accent: AppColors.blue,
           onTap: () => context.push(AppRoutes.myReviews),
         ),
         ProfileMenuItem(
           icon: Icons.settings_rounded,
-          label: 'Account Settings',
+          label: l10n.settingsTitle,
           accent: AppColors.success,
           onTap: () => context.push(AppRoutes.accountSettings),
         ),
         ProfileMenuItem(
           icon: Icons.help_outline_rounded,
-          label: 'Help & Support',
+          label: l10n.profileHelpSupport,
           accent: AppColors.danger,
           onTap: () => context.push(AppRoutes.help),
         ),
@@ -336,23 +344,23 @@ class _MainMenu extends StatelessWidget {
   }
 }
 
-const List<_MoreItem> _communityItems = <_MoreItem>[
+List<_MoreItem> _communityItems(AppLocalizations l10n) => <_MoreItem>[
   _MoreItem(
     Icons.leaderboard_rounded,
     AppColors.purple,
-    'Leaderboard',
+    l10n.profileLeaderboard,
     AppRoutes.leaderboard,
   ),
   _MoreItem(
     Icons.forum_rounded,
     AppColors.teal,
-    'Community',
+    l10n.profileCommunity,
     AppRoutes.community,
   ),
   _MoreItem(
     Icons.notifications_rounded,
     AppColors.orange,
-    'Notifications',
+    l10n.profileNotifications,
     AppRoutes.notifications,
   ),
 ];
@@ -382,7 +390,7 @@ class _MoreSection extends StatelessWidget {
           child: Semantics(
             header: true,
             child: Text(
-              'More',
+              context.l10n.profileMore,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w700,
@@ -428,7 +436,7 @@ class _ProgressErrorCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  friendlyErrorMessage(error),
+                  friendlyErrorMessage(context.l10n, error),
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ),
@@ -438,7 +446,7 @@ class _ProgressErrorCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: onRetry,
-              child: const Text('Try again'),
+              child: Text(context.l10n.commonRetry),
             ),
           ),
         ],

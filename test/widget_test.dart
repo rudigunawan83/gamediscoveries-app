@@ -1,4 +1,5 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gamediscoveries_mobile/app/app.dart';
 import 'package:gamediscoveries_mobile/core/network/models/paged_result.dart';
@@ -96,5 +97,34 @@ void main() {
 
     expect(find.text('Skip'), findsNothing);
     expect(find.text('Hi, Player 👋'), findsOneWidget);
+  });
+
+  testWidgets('the whole flow follows an Indonesian device', (
+    WidgetTester tester,
+  ) async {
+    tester.platformDispatcher.localesTestValue = const <Locale>[
+      Locale('id', 'ID'),
+    ];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
+    await _pumpApp(tester, prefs);
+
+    expect(find.text('Temukan. Main. Naik Level.'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lanjut'), findsOneWidget);
+    await tester.tap(find.text('Lewati'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hai, Pemain 👋'), findsOneWidget);
+    expect(
+      find.text('Belum ada game untuk ditampilkan. Cek lagi nanti.'),
+      findsOneWidget,
+    );
+    expect(find.text('Jelajahi'), findsOneWidget);
+    expect(find.text('Discover'), findsNothing);
   });
 }

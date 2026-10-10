@@ -9,6 +9,8 @@ import 'package:gamediscoveries_mobile/features/leaderboard/domain/leaderboard_m
 import 'package:gamediscoveries_mobile/features/leaderboard/presentation/leaderboard_screen.dart';
 import 'package:gamediscoveries_mobile/features/notifications/presentation/notifications_providers.dart';
 
+import '../../helpers/localized_app.dart';
+
 class _SignedIn extends AuthSessionController {
   @override
   Future<AuthSessionState> build() async =>
@@ -70,7 +72,7 @@ class _FakeRepository implements LeaderboardRepository {
   }
 }
 
-Widget _app(_FakeRepository repository) {
+Widget _app(_FakeRepository repository, {Locale locale = const Locale('en')}) {
   return ProviderScope(
     retry: (int retryCount, Object error) => null,
     overrides: [
@@ -78,7 +80,7 @@ Widget _app(_FakeRepository repository) {
       leaderboardRepositoryProvider.overrideWithValue(repository),
       notificationsProvider.overrideWith((Ref ref) async => null),
     ],
-    child: const MaterialApp(home: LeaderboardScreen()),
+    child: localizedApp(home: const LeaderboardScreen(), locale: locale),
   );
 }
 
@@ -102,6 +104,25 @@ void main() {
     expect(find.text('You'), findsOneWidget);
     expect(find.text('Lv 12'), findsOneWidget);
     expect(find.text('18,450 XP'), findsOneWidget);
+  });
+
+  testWidgets('renders Indonesian labels and number format', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_FakeRepository(), locale: const Locale('id')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Papan Peringkat'), findsOneWidget);
+    for (final label in <String>['Global', 'Mingguan', 'Bulanan']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('RizkyGamer'), findsOneWidget);
+    expect(find.text('29.450 XP'), findsOneWidget);
+    expect(find.text('7 game dimainkan'), findsOneWidget);
+    expect(find.text('Kamu'), findsOneWidget);
+    expect(find.text('18.450 XP'), findsOneWidget);
   });
 
   testWidgets('switching scope loads that leaderboard', (

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../core/utils/formatters.dart';
 
 class ProfileStat {
@@ -145,11 +146,12 @@ class _StatColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = stat.value;
-    final display = value == null ? '—' : formatCompact(value);
+    final l10n = context.l10n;
+    final display = value == null ? '—' : formatCompact(l10n, value);
 
     return Semantics(
       label: value == null
-          ? '${stat.semanticsLabel}: not available'
+          ? l10n.profileStatUnavailableSemantics(stat.semanticsLabel)
           : '${stat.semanticsLabel}: $display',
       excludeSemantics: true,
       child: Padding(

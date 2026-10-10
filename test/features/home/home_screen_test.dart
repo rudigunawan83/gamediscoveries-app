@@ -10,6 +10,8 @@ import 'package:gamediscoveries_mobile/features/discovery/presentation/providers
 import 'package:gamediscoveries_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:gamediscoveries_mobile/shared/models/game_summary.dart';
 
+import '../../helpers/localized_app.dart';
+
 class _GuestAuthController extends AuthSessionController {
   @override
   Future<AuthSessionState> build() async => const AuthSessionState.guest();
@@ -57,7 +59,7 @@ Widget _app({required Future<HomeDiscoveries> Function() loadHome}) {
         ),
       ),
     ],
-    child: const MaterialApp(home: HomeScreen()),
+    child: localizedApp(home: const HomeScreen()),
   );
 }
 

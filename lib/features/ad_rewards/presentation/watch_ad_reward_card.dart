@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../progress/presentation/progress_providers.dart';
 import '../data/ad_reward_repository.dart';
 import 'ad_reward_providers.dart';
@@ -35,7 +36,9 @@ class _WatchAdRewardCardState extends ConsumerState<WatchAdRewardCard> {
     }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(outcome.message)));
+      ..showSnackBar(
+        SnackBar(content: Text(adRewardMessage(context.l10n, outcome))),
+      );
   }
 
   @override
@@ -64,6 +67,7 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final available = status.remainingToday > 0;
 
     return DecoratedBox(
@@ -94,7 +98,7 @@ class _Card extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Watch & Earn',
+                    l10n.adRewardTitle,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -102,9 +106,12 @@ class _Card extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     available
-                        ? 'Watch a short video for +${status.xpPerAd} XP · '
-                              '${status.remainingToday}/${status.dailyLimit} left today'
-                        : 'All ${status.dailyLimit} videos watched. Come back tomorrow!',
+                        ? l10n.adRewardAvailable(
+                            status.xpPerAd,
+                            status.remainingToday,
+                            status.dailyLimit,
+                          )
+                        : l10n.adRewardExhausted(status.dailyLimit),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodySmall?.copyWith(
@@ -129,7 +136,7 @@ class _Card extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Text(
-                      '+${status.xpPerAd} XP',
+                      l10n.commonXpReward(status.xpPerAd),
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
             ),

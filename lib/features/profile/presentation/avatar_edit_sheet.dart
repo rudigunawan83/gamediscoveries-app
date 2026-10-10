@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import 'avatar_controller.dart';
 
 enum _AvatarAction { gallery, camera, remove }
@@ -19,55 +20,59 @@ Future<void> editAvatar(
   final action = await showModalBottomSheet<_AvatarAction>(
     context: context,
     showDragHandle: true,
-    builder: (BuildContext context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Text(
-              'Change avatar',
-              style: Theme.of(context).textTheme.titleLarge,
+    builder: (BuildContext context) {
+      final l10n = context.l10n;
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(
+                l10n.profileChangeAvatar,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.photo_library_rounded,
-              color: AppColors.gold,
-            ),
-            title: const Text('Choose from gallery'),
-            onTap: () => Navigator.of(context).pop(_AvatarAction.gallery),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.photo_camera_rounded,
-              color: AppColors.gold,
-            ),
-            title: const Text('Take a photo'),
-            onTap: () => Navigator.of(context).pop(_AvatarAction.camera),
-          ),
-          if (hasAvatar)
             ListTile(
               leading: const Icon(
-                Icons.delete_outline_rounded,
-                color: AppColors.danger,
+                Icons.photo_library_rounded,
+                color: AppColors.gold,
               ),
-              title: const Text(
-                'Remove photo',
-                style: TextStyle(color: AppColors.danger),
-              ),
-              onTap: () => Navigator.of(context).pop(_AvatarAction.remove),
+              title: Text(l10n.profileChooseFromGallery),
+              onTap: () => Navigator.of(context).pop(_AvatarAction.gallery),
             ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_camera_rounded,
+                color: AppColors.gold,
+              ),
+              title: Text(l10n.profileTakePhoto),
+              onTap: () => Navigator.of(context).pop(_AvatarAction.camera),
+            ),
+            if (hasAvatar)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.danger,
+                ),
+                title: Text(
+                  l10n.profileRemovePhoto,
+                  style: const TextStyle(color: AppColors.danger),
+                ),
+                onTap: () => Navigator.of(context).pop(_AvatarAction.remove),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    },
   );
   if (action == null || !context.mounted) {
     return;
   }
 
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = context.l10n;
   final controller = ref.read(avatarControllerProvider.notifier);
   try {
     switch (action) {
@@ -80,28 +85,28 @@ Future<void> editAvatar(
         );
         if (updated) {
           messenger.showSnackBar(
-            const SnackBar(content: Text('Avatar updated.')),
+            SnackBar(content: Text(l10n.profileAvatarUpdated)),
           );
         }
       case _AvatarAction.remove:
         await controller.remove();
         messenger.showSnackBar(
-          const SnackBar(content: Text('Avatar removed.')),
+          SnackBar(content: Text(l10n.profileAvatarRemoved)),
         );
     }
   } on PlatformException {
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text(
-          "Couldn't open the camera or photos. Check the app permissions.",
-        ),
+      SnackBar(content: Text(l10n.profileAvatarPermissionError)),
+    );
+  } on AvatarTooLargeException {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.profileAvatarTooLarge(AvatarController.maxUploadMb)),
       ),
     );
-  } on AvatarTooLargeException catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text(error.toString())));
   } catch (error) {
     messenger.showSnackBar(
-      SnackBar(content: Text(friendlyErrorMessage(error))),
+      SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
     );
   }
 }

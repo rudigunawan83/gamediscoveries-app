@@ -183,16 +183,6 @@ class CommunityPost {
     return raw[0].toUpperCase() + raw.substring(1);
   }
 
-  /// The section a post lives in, e.g. "Discussions".
-  String get sectionLabel => switch (type) {
-    'discussion' => 'Discussions',
-    'question' => 'Questions',
-    'recommendation' => 'Recommendations',
-    'game_share' => 'Game Shares',
-    'achievement_share' => 'Achievements',
-    _ => typeLabel,
-  };
-
   /// Same shape as the API's `CommunityPostDto`, readable by [fromPostJson].
   Map<String, dynamic> toPostJson() => <String, dynamic>{
     'id': postId ?? id,
@@ -257,14 +247,13 @@ class CommunityFeedPage {
 }
 
 enum CommunityPostSort {
-  latest('latest', 'Latest'),
-  trending('trending', 'Trending'),
-  mostLiked('most_liked', 'Most Liked');
+  latest('latest'),
+  trending('trending'),
+  mostLiked('most_liked');
 
-  const CommunityPostSort(this.apiValue, this.label);
+  const CommunityPostSort(this.apiValue);
 
   final String apiValue;
-  final String label;
 }
 
 class CommunityPostPage {

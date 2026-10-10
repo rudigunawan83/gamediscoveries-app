@@ -8,6 +8,8 @@ import 'package:gamediscoveries_mobile/features/auth/presentation/providers/auth
 import 'package:gamediscoveries_mobile/features/notifications/data/notifications_repository.dart';
 import 'package:gamediscoveries_mobile/features/notifications/domain/notification_models.dart';
 import 'package:gamediscoveries_mobile/features/notifications/presentation/notifications_screen.dart';
+
+import '../../helpers/localized_app.dart';
 import 'package:go_router/go_router.dart';
 
 class _SignedIn extends AuthSessionController {
@@ -58,7 +60,7 @@ class _FakeRepo implements NotificationsRepository {
   Future<void> markAllRead() async {}
 }
 
-Widget _app(_FakeRepo repo) {
+Widget _app(_FakeRepo repo, {Locale locale = const Locale('en')}) {
   final router = GoRouter(
     routes: <RouteBase>[
       GoRoute(path: '/', builder: (_, _) => const NotificationsScreen()),
@@ -75,7 +77,7 @@ Widget _app(_FakeRepo repo) {
       authSessionControllerProvider.overrideWith(_SignedIn.new),
       notificationsRepositoryProvider.overrideWithValue(repo),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: localizedRouterApp(router, locale: locale),
   );
 }
 
@@ -126,5 +128,36 @@ void main() {
     expect(repo.marked, <String>['n2']);
     expect(find.text('post p9'), findsOneWidget);
     expect(AppRoutes.communityPost('p9'), '/community/posts/p9');
+  });
+
+  final titleItems = <AppNotification>[
+    const AppNotification(id: 'n1', type: 'user_followed', message: 'm1'),
+    const AppNotification(id: 'n2', type: 'season_reset', message: 'm2'),
+    const AppNotification(id: 'n3', type: '', message: 'm3'),
+  ];
+
+  testWidgets('translates known notification types', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_app(_FakeRepo(titleItems)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Follower'), findsOneWidget);
+    expect(find.text('Season Reset'), findsOneWidget);
+    expect(find.text('Notification'), findsOneWidget);
+  });
+
+  testWidgets('shows Indonesian notification titles', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_FakeRepo(titleItems), locale: const Locale('id')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pengikut Baru'), findsOneWidget);
+    expect(find.text('Season Reset'), findsOneWidget);
+    expect(find.text('Notifikasi'), findsWidgets);
+    expect(find.text('m1'), findsOneWidget);
   });
 }

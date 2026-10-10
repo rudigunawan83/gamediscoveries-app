@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/gd_avatar.dart';
 import '../../../shared/widgets/gold_tab.dart';
@@ -16,6 +17,9 @@ import '../domain/leaderboard_models.dart';
 import 'leaderboard_providers.dart';
 
 const double _maxContentWidth = 560;
+
+String _entryName(AppLocalizations l10n, LeaderboardEntry entry) =>
+    entry.name.isEmpty ? l10n.profileDefaultName : entry.name;
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -32,20 +36,21 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final detail = ref.watch(leaderboardDetailProvider(_scope));
     final signedIn = ref.watch(isSignedInProvider).value ?? false;
     final unread = ref.watch(unreadNotificationsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
         titleSpacing: 20,
         title: Text(
-          'Leaderboard',
+          l10n.profileLeaderboard,
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
         actions: <Widget>[
           IconButton(
-            tooltip: 'Notifications',
+            tooltip: l10n.commonNotifications,
             onPressed: () => context.push(AppRoutes.notifications),
             icon: Badge(
               isLabelVisible: unread > 0,
@@ -72,10 +77,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 skipLoadingOnRefresh: true,
                 data: (LeaderboardDetail? data) {
                   if (data == null || data.items.isEmpty) {
-                    return const MessageView(
+                    return MessageView(
                       icon: Icons.leaderboard_rounded,
-                      title: 'No rankings yet',
-                      message: 'Play games to be the first on the board!',
+                      title: l10n.leaderboardEmptyTitle,
+                      message: l10n.leaderboardEmptyMessage,
                     );
                   }
                   return RefreshIndicator(
@@ -124,15 +129,23 @@ class _ScopeTabs extends StatelessWidget {
   final LeaderboardScope selected;
   final ValueChanged<LeaderboardScope> onChanged;
 
+  static String _label(AppLocalizations l10n, LeaderboardScope scope) =>
+      switch (scope) {
+        LeaderboardScope.global => l10n.leaderboardScopeGlobal,
+        LeaderboardScope.weekly => l10n.leaderboardScopeWeekly,
+        LeaderboardScope.monthly => l10n.leaderboardScopeMonthly,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       spacing: 10,
       children: <Widget>[
         for (final scope in LeaderboardScope.values)
           Expanded(
             child: GoldTab(
-              label: scope.label,
+              label: _label(l10n, scope),
               selected: scope == selected,
               onTap: () => onChanged(scope),
             ),
@@ -151,7 +164,7 @@ class _Board extends StatelessWidget {
   Widget build(BuildContext context) {
     final podium = data.items.take(3).toList(growable: false);
     final rest = data.items.skip(3).toList(growable: false);
-    final remaining = formatRemaining(data.periodEndsAt);
+    final remaining = formatTimeUntil(context.l10n, data.periodEndsAt);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -160,7 +173,7 @@ class _Board extends StatelessWidget {
         if (remaining.isNotEmpty)
           Center(
             child: Text(
-              'Season ends in ${remaining.replaceAll(' left', '')}',
+              context.l10n.leaderboardSeasonEndsIn(remaining),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
@@ -235,10 +248,15 @@ class _PodiumSpot extends StatelessWidget {
     final first = place == 1;
     final color = _placeColor(place);
     final avatarSize = first ? 92.0 : 72.0;
+    final l10n = context.l10n;
 
     return Semantics(
       container: true,
-      label: 'Rank $place, ${e.name}, ${formatGrouped(e.score)} XP',
+      label: l10n.leaderboardPodiumSemantics(
+        place,
+        _entryName(l10n, e),
+        e.score,
+      ),
       excludeSemantics: true,
       child: Column(
         children: <Widget>[
@@ -270,7 +288,7 @@ class _PodiumSpot extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            e.name,
+            _entryName(l10n, e),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
@@ -281,7 +299,7 @@ class _PodiumSpot extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${formatGrouped(e.score)} XP',
+            l10n.commonXpAmount(e.score),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -329,7 +347,11 @@ class _RingedAvatar extends StatelessWidget {
               ]
             : null,
       ),
-      child: GdAvatar(name: entry.name, imageUrl: entry.avatarUrl, size: size),
+      child: GdAvatar(
+        name: _entryName(context.l10n, entry),
+        imageUrl: entry.avatarUrl,
+        size: size,
+      ),
     );
   }
 }
@@ -458,15 +480,20 @@ class _RankRow extends StatelessWidget {
     final secondary = docked
         ? AppColors.onGold.withValues(alpha: 0.75)
         : AppColors.textSecondary;
-    final name = isMe ? 'You' : entry.name;
+    final l10n = context.l10n;
+    final name = isMe ? l10n.commonYou : _entryName(l10n, entry);
     final subtitle = level != null
-        ? 'Lv $level'
-        : '${entry.gamesPlayed} games played';
+        ? l10n.commonLevelShort(level)
+        : l10n.progressGamesPlayed(entry.gamesPlayed);
 
     return Semantics(
       container: true,
-      label:
-          'Rank ${entry.rank}, $name, $subtitle, ${formatGrouped(entry.score)} XP',
+      label: l10n.leaderboardRowSemantics(
+        entry.rank,
+        name,
+        subtitle,
+        entry.score,
+      ),
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -551,7 +578,7 @@ class _RankRow extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  '${formatGrouped(entry.score)} XP',
+                  l10n.commonXpAmount(entry.score),
                   maxLines: 1,
                   style: TextStyle(
                     fontSize: 16,
@@ -611,6 +638,7 @@ class _MyRankBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entry = me;
+    final l10n = context.l10n;
 
     return ColoredBox(
       color: AppColors.night,
@@ -643,8 +671,8 @@ class _MyRankBar extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             child: Text(
                               signedIn
-                                  ? 'Play a game to get ranked.'
-                                  : 'Sign in to see your rank.',
+                                  ? l10n.leaderboardPlayToRank
+                                  : l10n.leaderboardSignInToRank,
                               style: const TextStyle(
                                 color: AppColors.textSecondary,
                               ),
@@ -654,7 +682,7 @@ class _MyRankBar extends StatelessWidget {
                         if (!signedIn)
                           TextButton(
                             onPressed: () => context.push(AppRoutes.login),
-                            child: const Text('Sign In'),
+                            child: Text(l10n.commonSignIn),
                           ),
                       ],
                     ),

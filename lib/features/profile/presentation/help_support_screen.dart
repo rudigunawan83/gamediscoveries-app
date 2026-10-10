@@ -1,50 +1,33 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
 
-  static const List<(String, String)> _faqs = <(String, String)>[
-    (
-      'How do I earn XP?',
-      'Play games, complete missions and unlock achievements while signed '
-          'in. XP is awarded by our servers, so it may take a moment to show '
-          'up in your profile.',
-    ),
-    (
-      'Why didn\'t my progress save?',
-      'XP, streaks, favorites and achievements are only saved to your '
-          'account while you are signed in.',
-    ),
-    (
-      'What are missions?',
-      'Missions are challenges that refresh on a schedule. Open the Missions '
-          'tab to see what is active and how much XP each one rewards.',
-    ),
-    (
-      'A game won\'t load. What can I do?',
-      'Games are provided by third-party publishers and need a stable '
-          'internet connection. Go back and open the game again, or try '
-          'another game.',
-    ),
-    (
-      'How do I sign out?',
-      'Open Account Settings from your profile and tap Sign Out.',
-    ),
-  ];
+  static List<(String, String)> _faqs(AppLocalizations l10n) =>
+      <(String, String)>[
+        (l10n.helpFaqEarnXpQuestion, l10n.helpFaqEarnXpAnswer),
+        (l10n.helpFaqProgressQuestion, l10n.helpFaqProgressAnswer),
+        (l10n.helpFaqMissionsQuestion, l10n.helpFaqMissionsAnswer),
+        (l10n.helpFaqGameLoadQuestion, l10n.helpFaqGameLoadAnswer),
+        (l10n.helpFaqSignOutQuestion, l10n.helpFaqSignOutAnswer),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final faqs = _faqs(context.l10n);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & Support')),
+      appBar: AppBar(title: Text(context.l10n.profileHelpSupport)),
       body: ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        itemCount: _faqs.length,
+        itemCount: faqs.length,
         separatorBuilder: (BuildContext context, int index) =>
             const SizedBox(height: 10),
         itemBuilder: (BuildContext context, int index) {
-          final (question, answer) = _faqs[index];
+          final (question, answer) = faqs[index];
           return Card(
             clipBehavior: Clip.antiAlias,
             child: ExpansionTile(

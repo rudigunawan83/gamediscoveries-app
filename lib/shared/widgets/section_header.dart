@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../core/l10n/locale_resolution.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -33,11 +34,11 @@ class SectionHeader extends StatelessWidget {
           if (seeAll != null)
             GestureDetector(
               onTap: seeAll,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                 child: Text(
-                  'See All',
-                  style: TextStyle(
+                  context.l10n.commonSeeAll,
+                  style: const TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,

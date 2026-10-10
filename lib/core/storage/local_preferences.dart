@@ -17,6 +17,8 @@ class LocalPreferences {
   static const String _anonymousIdKey = 'analytics.anonymousId';
   static const String _savedCommunityPostsKey = 'community.savedPosts';
   static const String _skippedUpdateBuildKey = 'appUpdate.skippedBuild';
+  static const String _appLanguageKey = 'app.language';
+  static const String _appLanguageNeedsSyncKey = 'app.language.needsSync';
 
   final SharedPreferences _prefs;
 
@@ -48,5 +50,21 @@ class LocalPreferences {
 
   Future<void> setSkippedUpdateBuild(int build) {
     return _prefs.setInt(_skippedUpdateBuildKey, build);
+  }
+
+  /// `SYSTEM`, `en` or `id`; null until the user picks a language.
+  String? get appLanguage => _prefs.getString(_appLanguageKey);
+
+  Future<void> setAppLanguage(String code) {
+    return _prefs.setString(_appLanguageKey, code);
+  }
+
+  /// True while a locally chosen language has not been saved to the account.
+  /// Choices stored before account sync existed count as unsaved.
+  bool get appLanguageNeedsSync =>
+      _prefs.getBool(_appLanguageNeedsSyncKey) ?? (appLanguage != null);
+
+  Future<void> setAppLanguageNeedsSync(bool value) {
+    return _prefs.setBool(_appLanguageNeedsSyncKey, value);
   }
 }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../shared/widgets/gold_tab.dart';
 import '../../../shared/widgets/pill_tabs.dart';
 import '../../../shared/widgets/state_views.dart';
@@ -60,7 +61,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     if (!mounted) return;
 
     if (!signedIn) {
-      showCommunitySignInPrompt(context, 'Sign in to post in the community.');
+      showCommunitySignInPrompt(context, context.l10n.communitySignInToPost);
       return;
     }
 
@@ -77,6 +78,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final CommunityPostQuery query = (sort: _sort, search: _search);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
@@ -91,28 +93,28 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                   _debounce?.cancel();
                   setState(() => _search = text.trim());
                 },
-                decoration: const InputDecoration(
-                  hintText: 'Search posts',
+                decoration: InputDecoration(
+                  hintText: l10n.communitySearchPosts,
                   isDense: true,
-                  prefixIcon: Icon(Icons.search_rounded),
+                  prefixIcon: const Icon(Icons.search_rounded),
                 ),
               )
             : const _Title(),
         actions: <Widget>[
           if (_searching)
             IconButton(
-              tooltip: 'Close search',
+              tooltip: l10n.communityCloseSearch,
               onPressed: _closeSearch,
               icon: const Icon(Icons.close_rounded),
             )
           else ...<Widget>[
             IconButton(
-              tooltip: 'Saved posts',
+              tooltip: l10n.communitySavedPostsTooltip,
               onPressed: () => context.push(AppRoutes.communitySaved),
               icon: const Icon(Icons.bookmarks_outlined),
             ),
             _CircleIconButton(
-              tooltip: 'Search posts',
+              tooltip: l10n.communitySearchPosts,
               icon: Icons.search_rounded,
               onPressed: () => setState(() => _searching = true),
             ),
@@ -121,7 +123,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'New post',
+        tooltip: l10n.communityNewPostTooltip,
         onPressed: _openComposer,
         child: const Icon(Icons.add_rounded, size: 30),
       ),
@@ -136,7 +138,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                   for (final sort in CommunityPostSort.values)
                     Expanded(
                       child: GoldTab(
-                        label: sort.label,
+                        label: communitySortLabel(l10n, sort),
                         icon: _sortIcon(sort),
                         selected: sort == _sort,
                         onTap: () => setState(() => _sort = sort),
@@ -184,7 +186,7 @@ class _Title extends StatelessWidget {
         const SizedBox(width: 10),
         Flexible(
           child: Text(
-            'Community',
+            context.l10n.communityTitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(
@@ -273,17 +275,18 @@ class _PostFeedState extends ConsumerState<_PostFeed> {
   Future<void> _like(CommunityPost post) async {
     final signedIn = ref.read(isSignedInProvider).value ?? false;
     if (!signedIn) {
-      showCommunitySignInPrompt(context, 'Sign in to like posts.');
+      showCommunitySignInPrompt(context, context.l10n.communitySignInToLike);
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       await ref
           .read(communityPostsProvider(widget.query).notifier)
           .toggleLike(post);
     } catch (error) {
       messenger.showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+        SnackBar(content: Text(friendlyErrorMessage(l10n, error))),
       );
     }
   }
@@ -304,16 +307,17 @@ class _PostFeedState extends ConsumerState<_PostFeed> {
       data: (CommunityPostList list) {
         if (list.items.isEmpty) {
           final search = widget.query.search;
+          final l10n = context.l10n;
           return search.isEmpty
-              ? const MessageView(
+              ? MessageView(
                   icon: Icons.forum_outlined,
-                  title: 'Nothing here yet',
-                  message: 'Start the conversation with the + button.',
+                  title: l10n.communityEmptyTitle,
+                  message: l10n.communityEmptyMessage,
                 )
               : MessageView(
                   icon: Icons.search_off_rounded,
-                  title: 'No posts found',
-                  message: 'Nothing matches "$search". Try another word.',
+                  title: l10n.communityNoResultsTitle,
+                  message: l10n.communityNoResultsMessage(search),
                 );
         }
 
@@ -341,7 +345,7 @@ class _PostFeedState extends ConsumerState<_PostFeed> {
                 onLike: () => _like(post),
                 onToggleSave: () =>
                     toggleSavedCommunityPost(context, ref, post),
-                onShare: () => shareCommunityPost(post),
+                onShare: () => shareCommunityPost(context.l10n, post),
                 onMore: () => showCommunityPostMenu(context, ref, post),
               );
             },
@@ -359,14 +363,15 @@ class CommunitySavedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedCommunityPostsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Saved Posts')),
+      appBar: AppBar(title: Text(l10n.communitySavedPostsTitle)),
       body: saved.isEmpty
-          ? const MessageView(
+          ? MessageView(
               icon: Icons.bookmark_border_rounded,
-              title: 'No saved posts',
-              message: 'Tap the bookmark on a post to keep it here.',
+              title: l10n.communityNoSavedTitle,
+              message: l10n.communityNoSavedMessage,
             )
           : _Centered(
               child: ListView.separated(
@@ -381,7 +386,7 @@ class CommunitySavedScreen extends ConsumerWidget {
                     saved: true,
                     onToggleSave: () =>
                         toggleSavedCommunityPost(context, ref, post),
-                    onShare: () => shareCommunityPost(post),
+                    onShare: () => shareCommunityPost(l10n, post),
                     onMore: () => showCommunityPostMenu(context, ref, post),
                   );
                 },
@@ -403,7 +408,8 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
   final TextEditingController _content = TextEditingController();
   String _type = 'discussion';
   bool _submitting = false;
-  String? _error;
+  bool _incomplete = false;
+  Object? _error;
 
   @override
   void dispose() {
@@ -414,12 +420,16 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
 
   Future<void> _submit() async {
     if (_title.text.trim().isEmpty || _content.text.trim().isEmpty) {
-      setState(() => _error = 'Title and message are required.');
+      setState(() {
+        _incomplete = true;
+        _error = null;
+      });
       return;
     }
 
     setState(() {
       _submitting = true;
+      _incomplete = false;
       _error = null;
     });
 
@@ -433,7 +443,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
-      if (mounted) setState(() => _error = friendlyErrorMessage(error));
+      if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -441,7 +451,11 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final error = _error;
+    final l10n = context.l10n;
+    final failure = _error;
+    final error = _incomplete
+        ? l10n.communityComposerRequired
+        : (failure == null ? null : friendlyErrorMessage(l10n, failure));
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -455,7 +469,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            'New Post',
+            l10n.communityNewPostTitle,
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -463,7 +477,10 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
           const SizedBox(height: 14),
           PillTabs(
             padding: EdgeInsets.zero,
-            labels: const <String>['Discussion', 'Question'],
+            labels: <String>[
+              l10n.communityTypeDiscussion,
+              l10n.communityTypeQuestion,
+            ],
             selectedIndex: _type == 'discussion' ? 0 : 1,
             onChanged: (int i) =>
                 setState(() => _type = i == 0 ? 'discussion' : 'question'),
@@ -473,7 +490,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
             controller: _title,
             maxLength: 120,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(hintText: 'Title'),
+            decoration: InputDecoration(hintText: l10n.communityTitleHint),
           ),
           const SizedBox(height: 4),
           TextField(
@@ -481,9 +498,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
             minLines: 3,
             maxLines: 6,
             maxLength: 2000,
-            decoration: const InputDecoration(
-              hintText: 'Share something with the community...',
-            ),
+            decoration: InputDecoration(hintText: l10n.communityContentHint),
           ),
           if (error != null) ...<Widget>[
             Text(error, style: const TextStyle(color: AppColors.danger)),
@@ -497,7 +512,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
                     dimension: 22,
                     child: CircularProgressIndicator(strokeWidth: 2.5),
                   )
-                : const Text('Post'),
+                : Text(l10n.communityPublish),
           ),
         ],
       ),

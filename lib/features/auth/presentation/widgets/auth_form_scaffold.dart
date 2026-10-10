@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/widgets/brand_logo.dart';
 
 class AuthFormScaffold extends StatelessWidget {
@@ -74,16 +75,21 @@ class AuthErrorText extends StatelessWidget {
   }
 }
 
-String? validateEmail(String? value) {
+const int minPasswordLength = 8;
+const int minDisplayNameLength = 2;
+
+String? validateEmail(AppLocalizations l10n, String? value) {
   final email = value?.trim() ?? '';
-  if (email.isEmpty) return 'Email is required.';
+  if (email.isEmpty) return l10n.authEmailRequired;
   if (!email.contains('@') || !email.contains('.')) {
-    return 'Enter a valid email.';
+    return l10n.authEmailInvalid;
   }
   return null;
 }
 
-String? validatePassword(String? value) {
-  if ((value ?? '').length < 8) return 'Use at least 8 characters.';
+String? validatePassword(AppLocalizations l10n, String? value) {
+  if ((value ?? '').length < minPasswordLength) {
+    return l10n.authMinCharacters(minPasswordLength);
+  }
   return null;
 }

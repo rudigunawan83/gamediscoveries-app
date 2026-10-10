@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gamediscoveries_mobile/core/l10n/locale_resolution.dart';
 import 'package:gamediscoveries_mobile/core/storage/local_preferences.dart';
 import 'package:gamediscoveries_mobile/features/app_update/data/app_update_platform.dart';
 import 'package:gamediscoveries_mobile/features/app_update/data/app_update_repository.dart';
@@ -75,6 +76,8 @@ Future<SharedPreferences> _pump(
         appUpdateRepositoryProvider.overrideWithValue(_FakeRepo(_release)),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         builder: (BuildContext context, Widget? child) =>
             AppUpdateGate(child: child!),
         home: const Scaffold(body: Text('home')),

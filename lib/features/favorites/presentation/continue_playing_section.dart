@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/game_card.dart';
 import '../../../shared/widgets/game_shelf.dart';
@@ -61,7 +62,7 @@ class _ContinuePlayingSectionState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           SectionHeader(
-            title: 'Continue Playing',
+            title: context.l10n.historyContinuePlaying,
             onSeeAll: () => context.push(AppRoutes.history),
           ),
           const SizedBox(height: 12),
@@ -71,7 +72,7 @@ class _ContinuePlayingSectionState
           ),
           if (rest.isNotEmpty) ...<Widget>[
             const SizedBox(height: 20),
-            GameShelf(title: 'Recently Played', games: rest),
+            GameShelf(title: context.l10n.historyRecentlyPlayed, games: rest),
           ],
         ],
       ),
@@ -86,13 +87,13 @@ class ContinuePlayingCard extends StatelessWidget {
 
   final HistoryEntry entry;
 
-  static String details(HistoryEntry entry) {
+  static String details(AppLocalizations l10n, HistoryEntry entry) {
     final platform = entry.platformLabel;
     final parts = <String>[
-      if (platform != null) 'on $platform',
-      formatTimeAgo(entry.playedAt),
+      if (platform != null) l10n.historyPlayedOn(platform),
+      formatTimeAgo(l10n, entry.playedAt),
       if (entry.playTimeSeconds > 0)
-        '${formatPlayTime(entry.playTimeSeconds)} total',
+        l10n.historyTotalTime(formatPlayTime(l10n, entry.playTimeSeconds)),
     ].where((String p) => p.isNotEmpty);
     return parts.join(' · ');
   }
@@ -158,7 +159,7 @@ class ContinuePlayingCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              details(entry),
+                              details(context.l10n, entry),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: textTheme.bodySmall?.copyWith(
@@ -181,9 +182,9 @@ class ContinuePlayingCard extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                   ),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text(
-                    'Continue',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                  label: Text(
+                    context.l10n.historyContinue,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ],

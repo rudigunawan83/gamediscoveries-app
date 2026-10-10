@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/storage/local_preferences.dart';
 
 class _OnboardingPage {
@@ -14,26 +15,34 @@ class _OnboardingPage {
   final String body;
 }
 
-const List<_OnboardingPage> _pages = <_OnboardingPage>[
+List<_OnboardingPage> _pages(AppLocalizations l10n) => <_OnboardingPage>[
   _OnboardingPage(
-    words: <String>['Discover', 'Play', 'Progress'],
-    body:
-        'Thousands of instant games picked for you. No downloads, just tap '
-        'and play.',
+    words: <String>[
+      l10n.onboardingSlide1Word1,
+      l10n.onboardingSlide1Word2,
+      l10n.onboardingSlide1Word3,
+    ],
+    body: l10n.onboardingSlide1Body,
   ),
   _OnboardingPage(
-    words: <String>['Earn', 'Level', 'Compete'],
-    body:
-        'Earn XP every time you play, complete daily missions, build your '
-        'streak and climb the leaderboard.',
+    words: <String>[
+      l10n.onboardingSlide2Word1,
+      l10n.onboardingSlide2Word2,
+      l10n.onboardingSlide2Word3,
+    ],
+    body: l10n.onboardingSlide2Body,
   ),
   _OnboardingPage(
-    words: <String>['Play', 'Share', 'Connect'],
-    body:
-        'Join a community of gamers, discover new games, earn rewards, and '
-        'make new friends!',
+    words: <String>[
+      l10n.onboardingSlide3Word1,
+      l10n.onboardingSlide3Word2,
+      l10n.onboardingSlide3Word3,
+    ],
+    body: l10n.onboardingSlide3Body,
   ),
 ];
+
+const int _pageCount = 3;
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -46,7 +55,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _controller = PageController();
   int _index = 0;
 
-  bool get _isLast => _index == _pages.length - 1;
+  bool get _isLast => _index == _pageCount - 1;
 
   @override
   void dispose() {
@@ -74,6 +83,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final pages = _pages(l10n);
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -102,7 +114,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     opacity: _index > 0 ? 1 : 0,
                     duration: const Duration(milliseconds: 200),
                     child: IconButton(
-                      tooltip: 'Back',
+                      tooltip: l10n.commonBack,
                       onPressed: _index > 0
                           ? () => _controller.previousPage(
                               duration: const Duration(milliseconds: 300),
@@ -116,13 +128,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Expanded(
                   child: PageView.builder(
                     controller: _controller,
-                    itemCount: _pages.length,
+                    itemCount: pages.length,
                     onPageChanged: (int i) => setState(() => _index = i),
                     itemBuilder: (BuildContext context, int i) =>
-                        _PageText(page: _pages[i]),
+                        _PageText(page: pages[i]),
                   ),
                 ),
-                _Dots(count: _pages.length, index: _index),
+                _Dots(count: pages.length, index: _index),
                 const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -130,7 +142,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _next,
-                      child: Text(_isLast ? 'Get Started' : 'Next'),
+                      child: Text(
+                        _isLast ? l10n.onboardingGetStarted : l10n.commonNext,
+                      ),
                     ),
                   ),
                 ),
@@ -139,7 +153,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   onPressed: () =>
                       _finish(_isLast ? AppRoutes.login : AppRoutes.home),
                   child: Text(
-                    _isLast ? 'I already have an account' : 'Skip',
+                    _isLast ? l10n.onboardingHaveAccount : l10n.commonSkip,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -210,7 +224,7 @@ class _Dots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Page ${index + 1} of $count',
+      label: context.l10n.onboardingPageIndicator(index + 1, count),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[

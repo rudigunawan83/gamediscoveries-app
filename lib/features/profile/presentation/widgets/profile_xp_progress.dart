@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../progress/domain/progress_models.dart';
 
@@ -19,12 +20,16 @@ class ProfileXpProgress extends StatelessWidget {
     final info = level;
     final animate = !MediaQuery.disableAnimationsOf(context);
 
+    final l10n = context.l10n;
     final semantics = info == null
-        ? 'Level progress loading'
+        ? l10n.profileLevelLoadingSemantics
         : info.isMaxLevel
-        ? 'Level ${info.level}, maximum level reached'
-        : 'Level ${info.level}, ${formatGrouped(info.currentLevelXp)} of '
-              '${formatGrouped(info.nextLevelXp)} XP';
+        ? l10n.profileLevelMaxSemantics(info.level)
+        : l10n.profileLevelProgressSemantics(
+            info.level,
+            info.currentLevelXp,
+            info.nextLevelXp,
+          );
     final target = info == null ? 0.0 : info.progress.clamp(0.0, 1.0);
     final labelStyle = textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w800,
@@ -52,7 +57,9 @@ class ProfileXpProgress extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: Text(
-                  info == null ? 'Level —' : 'Level ${info.level}',
+                  info == null
+                      ? l10n.profileLevelUnknown
+                      : l10n.progressLevel(info.level),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: labelStyle,
@@ -62,7 +69,7 @@ class ProfileXpProgress extends StatelessWidget {
               Expanded(
                 flex: 3,
                 child: Text.rich(
-                  _xpSpan(info),
+                  _xpSpan(l10n, info),
                   maxLines: 1,
                   textAlign: TextAlign.end,
                   overflow: TextOverflow.ellipsis,
@@ -76,23 +83,23 @@ class ProfileXpProgress extends StatelessWidget {
     );
   }
 
-  static InlineSpan _xpSpan(LevelInfo? info) {
+  static InlineSpan _xpSpan(AppLocalizations l10n, LevelInfo? info) {
     const muted = TextStyle(
       color: AppColors.textSecondary,
       fontWeight: FontWeight.w600,
     );
     if (info == null) return const TextSpan(text: '— XP', style: muted);
     if (info.isMaxLevel) {
-      return const TextSpan(
-        text: 'MAX LEVEL',
-        style: TextStyle(color: AppColors.gold),
+      return TextSpan(
+        text: l10n.profileMaxLevel,
+        style: const TextStyle(color: AppColors.gold),
       );
     }
     return TextSpan(
       children: <InlineSpan>[
-        TextSpan(text: formatGrouped(info.currentLevelXp)),
+        TextSpan(text: formatGrouped(l10n, info.currentLevelXp)),
         TextSpan(
-          text: ' / ${formatGrouped(info.nextLevelXp)} XP',
+          text: ' / ${formatGrouped(l10n, info.nextLevelXp)} XP',
           style: muted,
         ),
       ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/storage/local_preferences.dart';
 import '../data/app_update_platform.dart';
 import 'app_update_providers.dart';
@@ -105,6 +106,7 @@ class _UpdateBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return Material(
       color: AppColors.surfaceAlt,
       elevation: 8,
@@ -121,7 +123,7 @@ class _UpdateBanner extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Update available: v${offer.release.latestVersion}',
+                    l10n.updateAvailable(offer.release.latestVersion),
                     style: textTheme.titleSmall?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -144,10 +146,10 @@ class _UpdateBanner extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                TextButton(onPressed: onLater, child: const Text('Later')),
+                TextButton(onPressed: onLater, child: Text(l10n.updateLater)),
                 TextButton(
                   onPressed: busy ? null : onUpdate,
-                  child: const Text('Update'),
+                  child: Text(l10n.updateAction),
                 ),
               ],
             ),
@@ -172,6 +174,7 @@ class _RequiredUpdateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return Material(
       color: AppColors.night,
       child: SafeArea(
@@ -187,7 +190,7 @@ class _RequiredUpdateView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Update required',
+                l10n.updateRequiredTitle,
                 textAlign: TextAlign.center,
                 style: textTheme.headlineSmall?.copyWith(
                   color: AppColors.textPrimary,
@@ -196,8 +199,7 @@ class _RequiredUpdateView extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'This version of GameDiscoveries is no longer supported. '
-                'Update to v${offer.release.latestVersion} to keep playing.',
+                l10n.updateRequiredMessage(offer.release.latestVersion),
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary,
@@ -218,7 +220,7 @@ class _RequiredUpdateView extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: busy ? null : onUpdate,
-                  child: Text(busy ? 'Opening…' : 'Update now'),
+                  child: Text(busy ? l10n.updateOpening : l10n.updateNow),
                 ),
               ),
             ],

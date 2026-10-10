@@ -132,11 +132,42 @@ Dokumen ini memetakan API backend yang benar-benar ditemukan di `gamediscoveries
     - `displayName`
     - `avatarUrl`
     - `roles: string[]`
+    - `username`
+    - `preferredLanguage`: `SYSTEM` | `en` | `id` (default `SYSTEM`)
 - Pagination: No
 - Flutter usage:
   - restore session
   - hydrate current user
   - role awareness untuk admin/superadmin jika nanti dibutuhkan
+  - terapkan bahasa akun (lihat `PUT /api/v1/users/me/preferences`)
+
+### `PUT /api/v1/users/me/profile`
+
+- Auth required: Yes (user aktif)
+- Request: `{ "displayName": string, "username": string }`
+- Response: `ApiResponse<UserResponse>` (user terbaru)
+- Validasi saat nilainya berubah:
+  - `displayName`: 2–40 karakter, tanpa karakter kontrol
+  - `username`: 3–30, huruf kecil, angka, atau tanda hubung; tidak boleh diawali/diakhiri hubung atau dobel hubung. Disimpan huruf kecil.
+  - username lama yang tidak lagi lolos format tetap boleh dipakai selama tidak diubah
+- Error: `422` field tidak valid (`errors.displayName` / `errors.username`), `409` username sudah dipakai, `401` belum login / akun tidak aktif
+- Flutter usage (`features/profile/presentation/account_settings_screen.dart`):
+  - form di Pengaturan Akun; email tidak bisa diubah
+  - sukses mengganti user di sesi
+
+### `PUT /api/v1/users/me/preferences`
+
+- Auth required: Yes (user aktif)
+- Request: `{ "preferredLanguage": "SYSTEM" | "en" | "id" }` (case-insensitive, disimpan kanonik)
+- Response: `ApiResponse<UserResponse>` (user terbaru)
+- Error: `400` nilai tidak didukung (`errors.preferredLanguage`), `401` belum login / akun tidak aktif
+- Notes:
+  - hanya menyimpan pilihan bahasa UI; terjemahan tetap di client
+  - `SYSTEM` = ikuti bahasa perangkat/browser
+- Flutter usage (`features/profile/presentation/language_sync.dart`):
+  - guest: bahasa disimpan lokal saja
+  - login/restore: pilihan lokal yang belum tersimpan ke akun (dipilih saat guest atau gagal upload) menang dan di-upload; selain itu bahasa akun dipakai
+  - ganti bahasa saat login: langsung di-upload; gagal → ditandai dan dicoba lagi saat login/perubahan berikutnya
 
 ## Catalog and Discovery
 

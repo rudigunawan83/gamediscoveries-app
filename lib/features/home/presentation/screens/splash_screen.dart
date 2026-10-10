@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../core/storage/local_preferences.dart';
 import '../../../../shared/widgets/brand_logo.dart';
 import '../../../auth/presentation/providers/auth_session_controller.dart';
@@ -79,7 +80,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   const BrandLogo(markSize: 132, fontSize: 32),
                   const SizedBox(height: 10),
                   Text(
-                    'Discover. Play. Progress.',
+                    context.l10n.splashTagline,
                     style: textTheme.titleMedium?.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -100,7 +101,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Loading your next adventure...',
+                    context.l10n.splashLoading,
                     style: textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/widgets/app_search_field.dart';
 import '../../../../shared/widgets/game_list_tile.dart';
 import '../../../../shared/widgets/pill_tabs.dart';
@@ -14,12 +15,19 @@ import '../../domain/models/game_list_query.dart';
 import '../providers/discover_controller.dart';
 import '../providers/discovery_providers.dart';
 
-const List<(String, GameSort)> _sorts = <(String, GameSort)>[
-  ('Trending', GameSort.trending),
-  ('New', GameSort.newest),
-  ('Popular', GameSort.popular),
-  ('A–Z', GameSort.title),
+const List<GameSort> _sorts = <GameSort>[
+  GameSort.trending,
+  GameSort.newest,
+  GameSort.popular,
+  GameSort.title,
 ];
+
+String _sortLabel(AppLocalizations l10n, GameSort sort) => switch (sort) {
+  GameSort.trending => l10n.discoverSortTrending,
+  GameSort.newest => l10n.discoverSortNew,
+  GameSort.popular => l10n.discoverSortPopular,
+  GameSort.title => l10n.discoverSortAz,
+};
 
 const Duration _searchDebounce = Duration(milliseconds: 400);
 
@@ -75,12 +83,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(discoverControllerProvider);
     final controller = ref.read(discoverControllerProvider.notifier);
-    final sortIndex = _sorts.indexWhere(
-      ((String, GameSort) s) => s.$2 == state.query.sort,
-    );
+    final sort = state.query.sort;
+    final sortIndex = sort == null ? -1 : _sorts.indexOf(sort);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Discover'), centerTitle: false),
+      appBar: AppBar(title: Text(l10n.navigationDiscover), centerTitle: false),
       body: RefreshIndicator(
         onRefresh: controller.refresh,
         child: CustomScrollView(
@@ -108,9 +116,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: PillTabs(
                   expanded: false,
-                  labels: <String>[for (final s in _sorts) s.$1],
+                  labels: <String>[for (final s in _sorts) _sortLabel(l10n, s)],
                   selectedIndex: sortIndex < 0 ? 0 : sortIndex,
-                  onChanged: (int i) => controller.setSort(_sorts[i].$2),
+                  onChanged: (int i) => controller.setSort(_sorts[i]),
                 ),
               ),
             ),
@@ -137,13 +145,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     }
 
     if (state.items.isEmpty) {
-      return const <Widget>[
+      return <Widget>[
         SliverFillRemaining(
           hasScrollBody: false,
           child: MessageView(
             icon: Icons.search_off_rounded,
-            title: 'No games found',
-            message: 'Try another keyword or category.',
+            title: context.l10n.discoverNoResultsTitle,
+            message: context.l10n.discoverNoResultsMessage,
           ),
         ),
       ];
@@ -200,7 +208,7 @@ class _CategoryRow extends ConsumerWidget {
         itemBuilder: (BuildContext context, int index) {
           if (index == 0) {
             return _CategoryItem(
-              label: 'All',
+              label: context.l10n.commonAll,
               icon: Icons.apps_rounded,
               color: AppColors.gold,
               selected: selected == null,

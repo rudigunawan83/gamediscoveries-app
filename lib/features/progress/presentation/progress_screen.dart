@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/hex_badge.dart';
 import '../../../shared/widgets/section_header.dart';
@@ -20,17 +21,18 @@ class ProgressScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(myProgressProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Progress')),
+      appBar: AppBar(title: Text(l10n.profileMyProgress)),
       body: progress.when(
         skipLoadingOnRefresh: true,
         data: (UserProgress? data) {
           if (data == null) {
-            return const SignInRequiredView(
+            return SignInRequiredView(
               icon: Icons.trending_up_rounded,
-              title: 'Track your progress',
-              message: 'Sign in to earn XP, level up and build your streak.',
+              title: l10n.progressSignInTitle,
+              message: l10n.progressSignInMessage,
             );
           }
 
@@ -63,6 +65,7 @@ class _ProgressContent extends ConsumerWidget {
     final level = data.level;
     final achievements = ref.watch(myAchievementsProvider).value;
     final xp = ref.watch(recentXpProvider);
+    final l10n = context.l10n;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -75,9 +78,9 @@ class _ProgressContent extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const Text(
-                  'Lv',
-                  style: TextStyle(
+                Text(
+                  l10n.progressLevelBadge,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.onGold,
@@ -113,16 +116,18 @@ class _ProgressContent extends ConsumerWidget {
           children: <Widget>[
             Text(
               level.isMaxLevel
-                  ? 'Max level reached'
-                  : '${formatGrouped(level.currentLevelXp)} / '
-                        '${formatGrouped(level.nextLevelXp)} XP',
+                  ? l10n.progressMaxLevelReached
+                  : l10n.commonXpProgress(
+                      level.currentLevelXp,
+                      level.nextLevelXp,
+                    ),
               style: textTheme.bodySmall?.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
             const Spacer(),
             Text(
-              'Total ${formatGrouped(level.totalXp)} XP',
+              l10n.progressTotalXp(level.totalXp),
               style: textTheme.bodySmall?.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -136,8 +141,8 @@ class _ProgressContent extends ConsumerWidget {
               child: StatTile(
                 icon: Icons.local_fire_department_rounded,
                 color: AppColors.orange,
-                value: '${data.stats.currentStreak}d',
-                label: 'Current Streak',
+                value: l10n.progressStreakDays(data.stats.currentStreak),
+                label: l10n.progressCurrentStreak,
               ),
             ),
             const SizedBox(width: 10),
@@ -145,8 +150,8 @@ class _ProgressContent extends ConsumerWidget {
               child: StatTile(
                 icon: Icons.sports_esports_rounded,
                 color: AppColors.blue,
-                value: formatCompact(data.stats.uniqueGamesPlayed),
-                label: 'Games Played',
+                value: formatCompact(l10n, data.stats.uniqueGamesPlayed),
+                label: l10n.progressGamesPlayedLabel,
               ),
             ),
             const SizedBox(width: 10),
@@ -159,23 +164,20 @@ class _ProgressContent extends ConsumerWidget {
                   value: achievements == null
                       ? '—'
                       : '${achievements.userUnlocked}',
-                  label: 'Achievements',
+                  label: l10n.profileAchievements,
                 ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 28),
-        const SectionHeader(
-          title: 'Recent XP Activity',
-          padding: EdgeInsets.zero,
-        ),
+        SectionHeader(title: l10n.progressRecentXp, padding: EdgeInsets.zero),
         const SizedBox(height: 12),
         xp.when(
           data: (List<XpTransaction> items) {
             if (items.isEmpty) {
               return Text(
-                'Play a game to start earning XP.',
+                l10n.progressNoXp,
                 style: textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -204,10 +206,11 @@ class _XpRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final positive = item.xpAmount >= 0;
     final label = item.description.isNotEmpty
         ? item.description
-        : _humanize(item.ruleCode);
+        : _humanize(l10n, item.ruleCode);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -243,7 +246,7 @@ class _XpRow extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  formatTimeAgo(item.createdAt),
+                  formatTimeAgo(l10n, item.createdAt),
                   style: textTheme.labelSmall?.copyWith(
                     color: AppColors.textMuted,
                   ),
@@ -252,7 +255,9 @@ class _XpRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${positive ? '+' : ''}${formatGrouped(item.xpAmount)} XP',
+            positive
+                ? l10n.commonXpReward(item.xpAmount)
+                : l10n.commonXpAmount(item.xpAmount),
             style: TextStyle(
               color: positive ? AppColors.gold : AppColors.danger,
               fontWeight: FontWeight.w900,
@@ -263,8 +268,8 @@ class _XpRow extends StatelessWidget {
     );
   }
 
-  static String _humanize(String code) {
-    if (code.isEmpty) return 'XP earned';
+  static String _humanize(AppLocalizations l10n, String code) {
+    if (code.isEmpty) return l10n.progressXpEarned;
     final words = code.toLowerCase().split('_');
     return words
         .map((String w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1))

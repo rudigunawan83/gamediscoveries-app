@@ -58,7 +58,8 @@ class AppNotification {
     return NotificationCategory.other;
   }
 
-  String get title {
+  /// [type] as Title Case words, for types the app has no translation for.
+  String? get humanizedType {
     final words = type
         .replaceAll(RegExp(r'[_\-.]'), ' ')
         .toLowerCase()
@@ -66,7 +67,7 @@ class AppNotification {
         .where((String w) => w.isNotEmpty)
         .map((String w) => w[0].toUpperCase() + w.substring(1));
     final label = words.join(' ');
-    return label.isEmpty ? 'Notification' : label;
+    return label.isEmpty ? null : label;
   }
 }
 

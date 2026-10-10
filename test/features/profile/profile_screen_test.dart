@@ -15,6 +15,8 @@ import 'package:gamediscoveries_mobile/features/profile/presentation/avatar_cont
 import 'package:gamediscoveries_mobile/features/profile/presentation/profile_screen.dart';
 import 'package:gamediscoveries_mobile/features/progress/domain/progress_models.dart';
 import 'package:gamediscoveries_mobile/features/progress/presentation/progress_providers.dart';
+
+import '../../helpers/localized_app.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -124,6 +126,7 @@ Widget _app({
   Future<UserProgress?> Function()? loadProgress,
   ImagePicker? picker,
   AvatarRepository? avatarRepository,
+  Locale locale = const Locale('en'),
 }) {
   final router = GoRouter(
     initialLocation: AppRoutes.profile,
@@ -176,7 +179,7 @@ Widget _app({
       if (avatarRepository != null)
         avatarRepositoryProvider.overrideWithValue(avatarRepository),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: localizedRouterApp(router, locale: locale),
   );
 }
 
@@ -296,6 +299,29 @@ void main() {
     expect(find.text('Create Account'), findsOneWidget);
     expect(find.text('Sign In'), findsOneWidget);
     for (final label in _mainLabels) {
+      await _scrollTo(tester, label);
+      expect(find.text(label), findsOneWidget);
+    }
+  });
+
+  testWidgets('guest profile is fully localized in Indonesian', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_app(signedIn: false, locale: const Locale('id')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profil'), findsOneWidget);
+    expect(find.text('Pemain Tamu'), findsOneWidget);
+    expect(find.text('Buat Akun'), findsOneWidget);
+    expect(find.text('Masuk'), findsOneWidget);
+    expect(find.byTooltip('Pengaturan Akun'), findsOneWidget);
+    for (final label in <String>[
+      'Favorit Saya',
+      'Riwayat Main',
+      'Ulasan Saya',
+      'Bantuan & Dukungan',
+      'Papan Peringkat',
+    ]) {
       await _scrollTo(tester, label);
       expect(find.text(label), findsOneWidget);
     }

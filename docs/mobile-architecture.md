@@ -427,6 +427,17 @@ API_BASE_URL=https://api.gamediscoveries.com
 APP_ENV=production
 ```
 
+## Localization (en, id)
+
+- Flutter gen-l10n: `lib/l10n/app_en.arb` (template, setiap key wajib punya `@key.description`) dan `app_id.arb`; regenerate dengan `flutter gen-l10n`.
+- Akses string lewat `context.l10n` (`lib/core/l10n/locale_resolution.dart`); di luar widget/test pakai `lookupAppLocalizations(locale)`.
+- Mode bahasa `AppLanguage` (`SYSTEM` | `en` | `id`) di `lib/core/l10n/app_language.dart`; `SYSTEM` mengikuti bahasa perangkat, bahasa tak didukung jatuh ke English.
+- State menyimpan enum/objek error, bukan teks; teks dipetakan saat `build` supaya ganti bahasa langsung berlaku. Di callback async, ambil `l10n` sebelum `await`.
+- Format angka/waktu per bahasa lewat `lib/core/utils/formatters.dart` (`l10n.localeName`); pesan error lewat `friendlyErrorMessage(l10n, error)`.
+- Sinkron akun: lihat `PUT /api/v1/users/me/preferences` di `backend-api-map.md` dan `features/profile/presentation/language_sync.dart`.
+- Tidak diterjemahkan: judul game, nama/handle user, konten buatan user, merek, isi game di WebView, dan konten dari server (judul misi/achievement, notifikasi, kategori, catatan rilis) sampai backend menyediakan versi lokal.
+- Penjaga regresi: `test/l10n/translation_completeness_test.dart` (key EN/ID sama, placeholder lengkap, tidak ada teks UI hardcoded di `lib`).
+
 ## Design System Direction
 
 Default theme:

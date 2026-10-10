@@ -6,6 +6,7 @@ class AuthUser {
     required this.roles,
     this.username,
     this.avatarUrl,
+    this.preferredLanguage,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -15,6 +16,7 @@ class AuthUser {
       displayName: json['displayName'] as String? ?? '',
       username: json['username'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
+      preferredLanguage: json['preferredLanguage'] as String?,
       roles: ((json['roles'] as List<dynamic>?) ?? const <dynamic>[])
           .map((dynamic role) => role.toString())
           .toList(growable: false),
@@ -28,6 +30,9 @@ class AuthUser {
   /// Public handle; older API builds omit it.
   final String? username;
   final String? avatarUrl;
+
+  /// `SYSTEM`, `en` or `id` as stored on the account; older API builds omit it.
+  final String? preferredLanguage;
   final List<String> roles;
 
   bool get isAuthenticated => id.isNotEmpty;

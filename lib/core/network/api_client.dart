@@ -60,6 +60,18 @@ class ApiClient {
     return _requireData(envelope);
   }
 
+  Future<T> put<T>(
+    String path, {
+    Object? body,
+    required T Function(Object? json) parser,
+  }) async {
+    final envelope = await _send<T>(
+      () => _dio.put<Object?>(path, data: body),
+      parser,
+    );
+    return _requireData(envelope);
+  }
+
   Future<T> delete<T>(
     String path, {
     Object? body,

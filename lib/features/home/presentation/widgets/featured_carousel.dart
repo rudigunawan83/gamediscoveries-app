@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/models/game_summary.dart';
 import '../../../../shared/widgets/game_card.dart';
 
@@ -84,7 +85,7 @@ class _FeaturedCard extends StatelessWidget {
 
     return Semantics(
       button: onTap != null,
-      label: 'Featured: ${game.title}',
+      label: context.l10n.homeFeaturedSemantics(game.title),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Material(
@@ -122,7 +123,7 @@ class _FeaturedCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          'FEATURED',
+                          context.l10n.homeFeaturedBadge,
                           style: textTheme.labelSmall?.copyWith(
                             color: AppColors.onGold,
                             fontWeight: FontWeight.w800,
