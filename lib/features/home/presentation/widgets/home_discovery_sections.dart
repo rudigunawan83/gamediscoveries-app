@@ -8,6 +8,7 @@ import '../../../../shared/widgets/game_shelf.dart';
 import '../../../../shared/widgets/state_views.dart';
 import '../../../discovery/domain/models/home_discoveries.dart';
 import '../../../discovery/presentation/providers/discovery_providers.dart';
+import '../../../ad_rewards/presentation/watch_ad_reward_card.dart';
 import '../../../favorites/presentation/continue_playing_section.dart';
 import 'featured_carousel.dart';
 
@@ -69,6 +70,7 @@ class _HomeContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         const ContinuePlayingSection(trailingGap: _sectionGap),
+        const WatchAdRewardCard(trailingGap: _sectionGap),
         for (final shelf in shelves) ...<Widget>[
           shelf,
           const SizedBox(height: _sectionGap),

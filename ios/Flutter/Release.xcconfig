@@ -1,1 +1,4 @@
 #include "Generated.xcconfig"
+
+// Replace with the real AdMob iOS app id before shipping rewarded ads.
+ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511

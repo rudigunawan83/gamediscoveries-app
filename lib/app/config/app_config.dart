@@ -13,6 +13,15 @@ class AppConfig {
     defaultValue: 'https://www.gamediscoveries.com',
   );
 
+  /// AdMob rewarded ad unit ids. Empty in release unless passed with
+  /// --dart-define, which hides "Watch & Earn".
+  static const String admobRewardedAndroid = String.fromEnvironment(
+    'ADMOB_REWARDED_ANDROID',
+  );
+  static const String admobRewardedIos = String.fromEnvironment(
+    'ADMOB_REWARDED_IOS',
+  );
+
   static String gameShareUrl(String slug) =>
       '$webBaseUrl/game/${Uri.encodeComponent(slug)}';
 

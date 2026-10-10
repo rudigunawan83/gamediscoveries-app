@@ -715,6 +715,44 @@ Flutter usage:
 - tabs unlocked / in progress / recent
 - achievement detail
 
+## Rewarded Video Ads (Watch & Earn)
+
+XP for watching an AdMob rewarded video to the end. XP is never granted for ad
+clicks (forbidden by ad network policies) and never reported by the app: it is
+granted only when AdMob calls the backend's server-side verification (SSV)
+endpoint with a valid ECDSA signature. Rule `REWARDED_AD_WATCHED`,
+`Xp:RewardedAdXp` = 50 (more than the best single play session, 10 + 30),
+`AdRewards:DailyLimit` = 5 per UTC day, still subject to `Xp:DailyXpCap`.
+Off until `AdRewards:Enabled=true`.
+
+### `GET /api/v1/me/ad-rewards`
+
+- Auth required: Yes
+- Response: `enabled`, `xpPerAd`, `dailyLimit`, `watchedToday`, `remainingToday`
+
+### `POST /api/v1/me/ad-rewards/tickets`
+
+- Auth required: Yes
+- Request: `{ "platform": "ANDROID" | "IOS" }`
+- Response: `ticketId`, `customData`, `userId`, `xpReward`, `expiresAt`, `remainingToday`
+- 429 when the daily limit is used, 503 when disabled
+- Flutter usage: set `ServerSideVerificationOptions(userId, customData)` on the `RewardedAd` before `show()`
+
+### `GET /api/v1/me/ad-rewards/tickets/{ticketId}`
+
+- Auth required: Yes
+- Response: `status` (`PENDING` | `REWARDED` | `REJECTED`), `xpAwarded`, `reason`
+- Flutter usage: poll a few seconds after the reward callback, then refresh progress
+
+### `GET /api/v1/ad-rewards/admob/ssv`
+
+- Called by Google only (anonymous, signature-verified, not rate limited). Set it as the
+  SSV callback URL of the rewarded ad unit in the AdMob console.
+
+App configuration: real ad unit ids via `--dart-define=ADMOB_REWARDED_ANDROID=...` /
+`ADMOB_REWARDED_IOS=...` (Google test units in debug only), AdMob app id via Gradle
+property `ADMOB_APP_ID` and `ios/Flutter/Release.xcconfig`.
+
 ## Leaderboards and Competitions
 
 ### `GET /api/v1/leaderboards`

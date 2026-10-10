@@ -48,6 +48,7 @@ dependencies:
   uuid: ^4.6.0
   webview_flutter_android: ^4.14.1
   image_picker: ^1.2.4
+  google_mobile_ads: ^9.1.0
 
 dev_dependencies:
   flutter_test:
