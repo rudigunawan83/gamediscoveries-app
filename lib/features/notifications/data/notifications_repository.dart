@@ -23,6 +23,13 @@ class NotificationsRepository {
       body: const <String, dynamic>{'notificationId': null},
     );
   }
+
+  Future<void> markRead(String notificationId) {
+    return _api.postAction(
+      '/api/v1/community/notifications/read',
+      body: <String, dynamic>{'notificationId': notificationId},
+    );
+  }
 }
 
 final notificationsRepositoryProvider = Provider<NotificationsRepository>((

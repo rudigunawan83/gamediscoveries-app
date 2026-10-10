@@ -9,6 +9,8 @@ class AppNotification {
     required this.type,
     this.message,
     this.actorUsername,
+    this.entityType,
+    this.entityId,
     this.createdAt,
     this.readAt,
   });
@@ -19,6 +21,8 @@ class AppNotification {
       type: json['type'] as String? ?? '',
       message: json['message'] as String?,
       actorUsername: json['actorUsername'] as String?,
+      entityType: json['entityType'] as String?,
+      entityId: json['entityId'] as String?,
       createdAt: parseDate(json['createdAt']),
       readAt: parseDate(json['readAt']),
     );
@@ -28,6 +32,10 @@ class AppNotification {
   final String type;
   final String? message;
   final String? actorUsername;
+
+  /// `post`, `comment`, `user` or `achievement`; [entityId] is its id.
+  final String? entityType;
+  final String? entityId;
   final DateTime? createdAt;
   final DateTime? readAt;
 
