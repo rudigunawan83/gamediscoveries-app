@@ -749,9 +749,11 @@ Off until `AdRewards:Enabled=true`.
 - Called by Google only (anonymous, signature-verified, not rate limited). Set it as the
   SSV callback URL of the rewarded ad unit in the AdMob console.
 
-App configuration: real ad unit ids via `--dart-define=ADMOB_REWARDED_ANDROID=...` /
-`ADMOB_REWARDED_IOS=...` (Google test units in debug only), AdMob app id via Gradle
-property `ADMOB_APP_ID` and `ios/Flutter/Release.xcconfig`.
+App configuration: debug builds always use Google test units. Release uses the real
+Android unit `ca-app-pub-7799318738010798/2479454480` (override with
+`--dart-define=ADMOB_REWARDED_ANDROID=...`; iOS needs `ADMOB_REWARDED_IOS=...`). AdMob app
+id `ca-app-pub-7799318738010798~7109888079` is the Gradle default (override with
+`-PADMOB_APP_ID`); iOS app id lives in `ios/Flutter/Release.xcconfig`.
 
 ## Leaderboards and Competitions
 

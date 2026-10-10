@@ -13,10 +13,11 @@ class AppConfig {
     defaultValue: 'https://www.gamediscoveries.com',
   );
 
-  /// AdMob rewarded ad unit ids. Empty in release unless passed with
-  /// --dart-define, which hides "Watch & Earn".
+  /// AdMob rewarded ad unit ids, used in release builds only. An empty id
+  /// hides "Watch & Earn" on that platform.
   static const String admobRewardedAndroid = String.fromEnvironment(
     'ADMOB_REWARDED_ANDROID',
+    defaultValue: 'ca-app-pub-7799318738010798/2479454480',
   );
   static const String admobRewardedIos = String.fromEnvironment(
     'ADMOB_REWARDED_IOS',

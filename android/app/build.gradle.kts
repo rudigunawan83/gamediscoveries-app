@@ -23,10 +23,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Real AdMob app id comes from -PADMOB_APP_ID / gradle.properties; Google's sample id otherwise.
+        // Override with -PADMOB_APP_ID to build against another AdMob app.
         manifestPlaceholders["admobAppId"] =
             (project.findProperty("ADMOB_APP_ID") as String?)
-                ?: "ca-app-pub-3940256099942544~3347511713"
+                ?: "ca-app-pub-7799318738010798~7109888079"
     }
 
     buildTypes {

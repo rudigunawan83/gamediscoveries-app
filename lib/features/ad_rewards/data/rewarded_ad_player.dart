@@ -26,7 +26,8 @@ abstract class RewardedAdPlayer {
 }
 
 class AdMobRewardedAdPlayer implements RewardedAdPlayer {
-  // Google's public sample units; real ones are passed with --dart-define.
+  // Google's public sample units. Debug builds always use them: showing real
+  // ads to ourselves counts as invalid traffic and can get the account banned.
   static const String _testAndroidUnit =
       'ca-app-pub-3940256099942544/5224354917';
   static const String _testIosUnit = 'ca-app-pub-3940256099942544/1712485313';
@@ -45,8 +46,8 @@ class AdMobRewardedAdPlayer implements RewardedAdPlayer {
   }
 
   static String? _orTestUnit(String configured, String testUnit) {
-    if (configured.isNotEmpty) return configured;
-    return kReleaseMode ? null : testUnit;
+    if (!kReleaseMode) return testUnit;
+    return configured.isEmpty ? null : configured;
   }
 
   @override
