@@ -38,9 +38,3 @@ final similarGamesProvider = FutureProvider.autoDispose
     .family<List<GameSummary>, String>((Ref ref, String gameId) {
       return ref.watch(discoveryRepositoryProvider).getSimilar(gameId);
     });
-
-const GameListQuery mobileReadyShelfQuery = GameListQuery(
-  pageSize: 12,
-  mobileReady: true,
-  sort: GameSort.newest,
-);

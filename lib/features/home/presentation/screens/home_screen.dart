@@ -20,7 +20,6 @@ class HomeScreen extends ConsumerWidget {
 
   Future<void> _refresh(WidgetRef ref) async {
     ref
-      ..invalidate(gameListProvider(mobileReadyShelfQuery))
       ..invalidate(homeDiscoveriesProvider)
       ..invalidate(forYouProvider)
       ..invalidate(myProgressProvider)

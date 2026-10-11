@@ -62,7 +62,11 @@ class _HomeContent extends StatelessWidget {
         games: data.trending,
         onSeeAll: seeAll,
       ),
-      const _MobileReadyShelf(),
+      GameShelf(
+        title: l10n.homeShelfMobile,
+        games: data.mobile,
+        onSeeAll: seeAll,
+      ),
       GameShelf(
         title: l10n.homeShelfPopular,
         games: data.popular,
@@ -107,26 +111,6 @@ class _RecommendedShelf extends ConsumerWidget {
       title: context.l10n.homeShelfRecommended,
       games: games == null || games.isEmpty ? fallback : games,
       onSeeAll: () => context.go(AppRoutes.discover),
-    );
-  }
-}
-
-class _MobileReadyShelf extends ConsumerWidget {
-  const _MobileReadyShelf();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final games = ref.watch(gameListProvider(mobileReadyShelfQuery));
-
-    return games.when(
-      skipLoadingOnRefresh: true,
-      data: (result) => GameShelf(
-        title: context.l10n.homeShelfMobile,
-        games: result.items,
-        onSeeAll: () => context.go(AppRoutes.discover),
-      ),
-      loading: () => const GameShelfSkeleton(),
-      error: (Object error, StackTrace stackTrace) => const SizedBox.shrink(),
     );
   }
 }

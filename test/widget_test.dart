@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gamediscoveries_mobile/app/app.dart';
 import 'package:gamediscoveries_mobile/core/analytics/app_analytics.dart';
-import 'package:gamediscoveries_mobile/core/network/models/paged_result.dart';
 import 'package:gamediscoveries_mobile/core/storage/local_preferences.dart';
 import 'package:gamediscoveries_mobile/features/auth/domain/models/auth_session_state.dart';
 import 'package:gamediscoveries_mobile/features/auth/presentation/providers/auth_session_controller.dart';
@@ -52,15 +51,6 @@ Future<void> _pumpApp(WidgetTester tester, SharedPreferences prefs) {
         ),
         homeDiscoveriesProvider.overrideWith((Ref ref) async => _emptyHome),
         forYouProvider.overrideWith((Ref ref) async => <GameSummary>[]),
-        gameListProvider(mobileReadyShelfQuery).overrideWith(
-          (Ref ref) async => const PagedResult<GameSummary>(
-            items: <GameSummary>[],
-            page: 1,
-            pageSize: 12,
-            total: 0,
-            totalPages: 0,
-          ),
-        ),
       ],
       child: const GameDiscoveriesApp(),
     ),

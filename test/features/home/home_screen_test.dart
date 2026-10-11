@@ -2,7 +2,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gamediscoveries_mobile/core/network/api_exception.dart';
-import 'package:gamediscoveries_mobile/core/network/models/paged_result.dart';
 import 'package:gamediscoveries_mobile/features/auth/domain/models/auth_session_state.dart';
 import 'package:gamediscoveries_mobile/features/auth/presentation/providers/auth_session_controller.dart';
 import 'package:gamediscoveries_mobile/features/discovery/domain/models/home_discoveries.dart';
@@ -33,7 +32,7 @@ HomeDiscoveries _home({List<GameSummary> trending = const <GameSummary>[]}) {
     trending: trending,
     latest: const <GameSummary>[],
     popular: const <GameSummary>[],
-    mobile: const <GameSummary>[],
+    mobile: <GameSummary>[_game('Touch Hero')],
     multiplayer: const <GameSummary>[],
     hotGames: const <GameSummary>[],
     bestGames: const <GameSummary>[],
@@ -49,15 +48,6 @@ Widget _app({required Future<HomeDiscoveries> Function() loadHome}) {
       authSessionControllerProvider.overrideWith(_GuestAuthController.new),
       homeDiscoveriesProvider.overrideWith((Ref ref) => loadHome()),
       forYouProvider.overrideWith((Ref ref) async => <GameSummary>[]),
-      gameListProvider(mobileReadyShelfQuery).overrideWith(
-        (Ref ref) async => PagedResult<GameSummary>(
-          items: <GameSummary>[_game('Touch Hero')],
-          page: 1,
-          pageSize: 12,
-          total: 1,
-          totalPages: 1,
-        ),
-      ),
     ],
     child: localizedApp(home: const HomeScreen()),
   );
