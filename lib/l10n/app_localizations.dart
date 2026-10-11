@@ -1502,6 +1502,48 @@ abstract class AppLocalizations {
   /// **'No reviews yet. Be the first after you play!'**
   String get gameNoReviews;
 
+  /// Label above the review star picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your rating'**
+  String get gameYourRating;
+
+  /// Placeholder of the review text field.
+  ///
+  /// In en, this message translates to:
+  /// **'What did you think about this game?'**
+  String get gameReviewHint;
+
+  /// Button that posts a game review.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit review'**
+  String get gameSubmitReview;
+
+  /// Button label while a review is being saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get gameSavingReview;
+
+  /// Prompt on the reviews tab for guests.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to write a review.'**
+  String get gameSignInToReview;
+
+  /// Snackbar after a review is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Review posted'**
+  String get gameReviewSaved;
+
+  /// Screen reader label of a star in the review picker.
+  ///
+  /// In en, this message translates to:
+  /// **'{rating} out of 5 stars'**
+  String gameReviewStars(int rating);
+
   /// Shelf title of similar games.
   ///
   /// In en, this message translates to:

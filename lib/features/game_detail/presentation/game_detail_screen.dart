@@ -19,6 +19,7 @@ import '../../favorites/presentation/favorite_button.dart';
 import '../../game_player/presentation/game_player_screen.dart';
 import '../domain/game_detail.dart';
 import 'game_detail_providers.dart';
+import 'game_review_composer.dart';
 
 const double _heroHeight = 280;
 List<String> _tabs(AppLocalizations l10n) => <String>[
@@ -390,27 +391,37 @@ class _ReviewsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reviews = ref.watch(gameReviewsProvider(slug));
 
-    return reviews.when(
-      data: (ReviewSummary data) {
-        if (data.items.isEmpty) {
-          return _TextSection(text: null, empty: context.l10n.gameNoReviews);
-        }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        GameReviewComposer(slug: slug),
+        const SizedBox(height: 14),
+        reviews.when(
+          data: (ReviewSummary data) {
+            if (data.items.isEmpty) {
+              return _TextSection(
+                text: null,
+                empty: context.l10n.gameNoReviews,
+              );
+            }
 
-        return Column(
-          children: <Widget>[
-            for (final review in data.items.take(10))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _ReviewTile(review: review),
-              ),
-          ],
-        );
-      },
-      loading: () => const LoadingView(),
-      error: (Object error, StackTrace stackTrace) => ErrorView(
-        error: error,
-        onRetry: () => ref.invalidate(gameReviewsProvider(slug)),
-      ),
+            return Column(
+              children: <Widget>[
+                for (final review in data.items.take(10))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _ReviewTile(review: review),
+                  ),
+              ],
+            );
+          },
+          loading: () => const LoadingView(),
+          error: (Object error, StackTrace stackTrace) => ErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(gameReviewsProvider(slug)),
+          ),
+        ),
+      ],
     );
   }
 }

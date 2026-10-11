@@ -866,6 +866,29 @@ class AppLocalizationsId extends AppLocalizations {
       'Belum ada ulasan. Jadilah yang pertama setelah bermain!';
 
   @override
+  String get gameYourRating => 'Rating-mu';
+
+  @override
+  String get gameReviewHint => 'Bagaimana pendapatmu tentang game ini?';
+
+  @override
+  String get gameSubmitReview => 'Kirim ulasan';
+
+  @override
+  String get gameSavingReview => 'Menyimpan…';
+
+  @override
+  String get gameSignInToReview => 'Masuk untuk menulis ulasan.';
+
+  @override
+  String get gameReviewSaved => 'Ulasan terkirim';
+
+  @override
+  String gameReviewStars(int rating) {
+    return '$rating dari 5 bintang';
+  }
+
+  @override
   String get gameSimilarGames => 'Game Serupa';
 
   @override

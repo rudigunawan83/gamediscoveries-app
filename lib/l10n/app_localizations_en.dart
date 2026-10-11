@@ -864,6 +864,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameNoReviews => 'No reviews yet. Be the first after you play!';
 
   @override
+  String get gameYourRating => 'Your rating';
+
+  @override
+  String get gameReviewHint => 'What did you think about this game?';
+
+  @override
+  String get gameSubmitReview => 'Submit review';
+
+  @override
+  String get gameSavingReview => 'Saving…';
+
+  @override
+  String get gameSignInToReview => 'Sign in to write a review.';
+
+  @override
+  String get gameReviewSaved => 'Review posted';
+
+  @override
+  String gameReviewStars(int rating) {
+    return '$rating out of 5 stars';
+  }
+
+  @override
   String get gameSimilarGames => 'Similar Games';
 
   @override
