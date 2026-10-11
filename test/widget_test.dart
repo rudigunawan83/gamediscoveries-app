@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gamediscoveries_mobile/app/app.dart';
+import 'package:gamediscoveries_mobile/core/analytics/app_analytics.dart';
 import 'package:gamediscoveries_mobile/core/network/models/paged_result.dart';
 import 'package:gamediscoveries_mobile/core/storage/local_preferences.dart';
 import 'package:gamediscoveries_mobile/features/auth/domain/models/auth_session_state.dart';
@@ -38,6 +39,14 @@ Future<void> _pumpApp(WidgetTester tester, SharedPreferences prefs) {
       retry: (int retryCount, Object error) => null,
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        appAnalyticsProvider.overrideWithValue(
+          AppAnalytics(
+            send: (List<Map<String, Object?>> events) async {},
+            anonymousId: () => 'test',
+            platform: 'ANDROID',
+            flushDelay: Duration.zero,
+          ),
+        ),
         authSessionControllerProvider.overrideWith(
           _FakeAuthSessionController.new,
         ),

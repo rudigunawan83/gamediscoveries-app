@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/analytics/app_analytics.dart';
 import '../../features/achievements/presentation/achievements_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
@@ -99,7 +100,17 @@ final appRouterProvider = Provider<GoRouter>((Ref ref) {
     ],
   );
 
-  ref.onDispose(router.dispose);
+  final analytics = ref.read(appAnalyticsProvider);
+  void trackScreen() {
+    final path = router.routerDelegate.currentConfiguration.uri.path;
+    if (path != AppRoutes.splash) analytics.screenView(path);
+  }
+
+  router.routerDelegate.addListener(trackScreen);
+  ref.onDispose(() {
+    router.routerDelegate.removeListener(trackScreen);
+    router.dispose();
+  });
   return router;
 });
 

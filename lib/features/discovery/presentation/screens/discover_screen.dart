@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/analytics/app_analytics.dart';
 import '../../../../core/l10n/locale_resolution.dart';
 import '../../../../shared/widgets/app_search_field.dart';
 import '../../../../shared/widgets/game_list_tile.dart';
@@ -69,6 +70,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     _debounce?.cancel();
     _debounce = Timer(_searchDebounce, () {
       ref.read(discoverControllerProvider.notifier).setSearch(text);
+      ref.read(appAnalyticsProvider).search(text);
     });
   }
 
