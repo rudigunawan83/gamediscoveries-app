@@ -12,6 +12,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../../app/config/app_config.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/analytics/app_analytics.dart';
 import '../../../core/l10n/locale_resolution.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../shared/widgets/state_views.dart';
@@ -25,6 +26,10 @@ import '../../progress/presentation/progress_providers.dart';
 import '../data/game_session_repository.dart';
 
 const Duration _heartbeatInterval = Duration(seconds: 30);
+
+/// Embeds that never fire `load` (blocked, hanging CDN) count as failed.
+const Duration _gameLoadTimeout = Duration(seconds: 45);
+const String _hostChannel = 'GameHost';
 
 /// Fullscreen gameplay in the game's designed orientation. Call before
 /// navigating to the player (when the orientation is known) to avoid a
@@ -110,10 +115,15 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
   late final LibraryRepository _library;
   late final bool _signedIn;
   late final Logger _logger;
+  late final AppAnalytics _analytics;
   final Stopwatch _played = Stopwatch();
+  final Stopwatch _loadClock = Stopwatch();
 
   String? _sessionId;
   Timer? _heartbeat;
+  Timer? _loadTimeout;
+  bool _hostReady = false;
+  bool _gameLoaded = false;
   bool _loading = true;
   bool _paused = false;
   bool _ended = false;
@@ -130,19 +140,20 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
     _library = ref.read(libraryRepositoryProvider);
     _signedIn = ref.read(isSignedInProvider).value ?? false;
     _logger = ref.read(loggerProvider);
+    _analytics = ref.read(appAnalyticsProvider);
 
     enterGameDisplayMode(landscape: widget.game.isLandscape);
     _web = _createWebView();
     _orientationTimeout = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) setState(() => _orientationTimedOut = true);
     });
-    _startSession();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _orientationTimeout?.cancel();
+    _loadTimeout?.cancel();
     _heartbeat?.cancel();
     if (!_ended) unawaited(_endSession());
     super.dispose();
@@ -169,23 +180,24 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
+      ..addJavaScriptChannel(
+        _hostChannel,
+        onMessageReceived: (JavaScriptMessage message) {
+          if (message.message == 'loaded') _onGameLoaded();
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
-            if (mounted) setState(() => _loading = false);
-          },
+          onPageFinished: (_) => _hostReady = true,
           onWebResourceError: (WebResourceError error) {
-            if (error.isForMainFrame != true || !mounted) return;
-            setState(() {
-              _loading = false;
-              _loadError = _LoadError.failed;
-            });
+            if (error.isForMainFrame != true) return;
+            _onGameLoadFailed('load_failed');
           },
           // The main frame is our host page; anything trying to replace it
           // (ads, outbound links) is blocked while the game iframe navigates
           // freely.
           onNavigationRequest: (NavigationRequest request) =>
-              request.isMainFrame && !_loading
+              request.isMainFrame && _hostReady
               ? NavigationDecision.prevent
               : NavigationDecision.navigate,
         ),
@@ -215,12 +227,50 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
 
     setState(() => _loadStarted = true);
     _orientationTimeout?.cancel();
+    _armLoadTimeout();
     final url = Uri.parse(widget.game.playUrl!);
     _web.loadHtmlString(_hostPage(url), baseUrl: '${AppConfig.webBaseUrl}/');
   }
 
+  void _armLoadTimeout() {
+    _loadClock
+      ..reset()
+      ..start();
+    _loadTimeout?.cancel();
+    _loadTimeout = Timer(_gameLoadTimeout, () {
+      if (_loading) _onGameLoadFailed('load_timeout');
+    });
+  }
+
+  /// The play session (and its XP) starts only once the game frame has
+  /// actually loaded, never on the tap that opened the player.
+  void _onGameLoaded() {
+    if (!mounted || !_loading || _loadError != null) return;
+    _loadTimeout?.cancel();
+    _loadClock.stop();
+    setState(() => _loading = false);
+    if (_gameLoaded) return;
+    _gameLoaded = true;
+    _analytics.gameLoaded(
+      widget.game.id,
+      loadMs: _loadClock.elapsedMilliseconds,
+    );
+    unawaited(_startSession());
+  }
+
+  void _onGameLoadFailed(String reason) {
+    if (!mounted || _loadError != null) return;
+    _loadTimeout?.cancel();
+    setState(() {
+      _loading = false;
+      _loadError = _LoadError.failed;
+    });
+    if (!_gameLoaded) _analytics.gameLoadFailed(widget.game.id, reason: reason);
+  }
+
   /// Mirrors the web player: the game runs inside a full-viewport iframe so
-  /// fixed-size canvases scale to the screen. The page itself has no scripts.
+  /// fixed-size canvases scale to the screen. The only script is the iframe
+  /// `onload` that reports the game frame as loaded.
   static String _hostPage(Uri gameUrl) {
     final src = const HtmlEscape(HtmlEscapeMode.attribute).convert('$gameUrl');
     return '''
@@ -235,7 +285,7 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
 </style>
 </head>
 <body>
-<iframe src="$src"
+<iframe src="$src" onload="$_hostChannel.postMessage('loaded')"
   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-orientation-lock"
   allow="fullscreen; autoplay; encrypted-media; gamepad; accelerometer; gyroscope; pointer-lock"
   allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -325,6 +375,8 @@ class _PlayerViewState extends ConsumerState<_PlayerView>
       _loadError = null;
     });
     _setPaused(false);
+    _hostReady = false;
+    _armLoadTimeout();
     _web.reload();
   }
 

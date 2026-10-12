@@ -66,6 +66,24 @@ class AppAnalytics {
     _enqueue('SEARCH', _lastPath ?? '/', <String, Object?>{'query': value});
   }
 
+  void gameLoaded(String gameId, {required int loadMs}) {
+    _enqueue(
+      'GAME_LOADED',
+      _lastPath ?? '/',
+      <String, Object?>{'loadMs': loadMs},
+      gameId: gameId,
+    );
+  }
+
+  void gameLoadFailed(String gameId, {required String reason}) {
+    _enqueue(
+      'GAME_LOAD_FAILED',
+      _lastPath ?? '/',
+      <String, Object?>{'reason': reason},
+      gameId: gameId,
+    );
+  }
+
   Future<void> flush() async {
     _timer?.cancel();
     _timer = null;
@@ -91,7 +109,12 @@ class AppAnalytics {
     _timer = null;
   }
 
-  void _enqueue(String eventType, String path, Map<String, Object?> metadata) {
+  void _enqueue(
+    String eventType,
+    String path,
+    Map<String, Object?> metadata, {
+    String? gameId,
+  }) {
     if (_disposed) return;
     final now = _clock().toUtc();
     _queue.add(<String, Object?>{
@@ -99,6 +122,7 @@ class AppAnalytics {
       'eventType': eventType,
       'anonymousId': _anonymousId(),
       'sessionId': _session(now),
+      'gameId': ?gameId,
       'source': 'MOBILE',
       'platform': platform,
       'deviceType': 'MOBILE',

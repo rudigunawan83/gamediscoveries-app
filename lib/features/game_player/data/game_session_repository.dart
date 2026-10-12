@@ -18,7 +18,7 @@ class GameSessionRepository {
       '/api/v1/games/$gameId/sessions/start',
       body: <String, dynamic>{
         'anonymousId': _anonymousId,
-        'source': 'mobile_app',
+        'source': 'MOBILE',
         'platform': platform,
         'deviceType': 'mobile',
       },

@@ -56,6 +56,24 @@ void main() {
     analytics.dispose();
   });
 
+  test('reports game load outcomes with the game id', () {
+    final analytics = build();
+    analytics.gameLoaded('g-1', loadMs: 1200);
+    analytics.gameLoadFailed('g-2', reason: 'load_timeout');
+
+    final events = analytics.pending;
+    expect(events.map((e) => e['eventType']), <String>[
+      'GAME_LOADED',
+      'GAME_LOAD_FAILED',
+    ]);
+    expect(events.first['gameId'], 'g-1');
+    expect(events.first['metadata'], <String, Object?>{'loadMs': 1200});
+    expect(events.last['metadata'], <String, Object?>{'reason': 'load_timeout'});
+    analytics.screenView('/home');
+    expect(analytics.pending.last.containsKey('gameId'), isFalse);
+    analytics.dispose();
+  });
+
   test('starts a new session after 30 minutes of inactivity', () {
     final analytics = build();
     analytics.screenView('/home');
