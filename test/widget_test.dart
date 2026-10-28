@@ -118,7 +118,7 @@ void main() {
     await tester.tap(find.text('Lewati'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hai, Pemain 👋'), findsOneWidget);
+    expect(find.text('Hai, Gamers'), findsOneWidget);
     expect(
       find.text('Belum ada game untuk ditampilkan. Cek lagi nanti.'),
       findsOneWidget,
